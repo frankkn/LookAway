@@ -1,0 +1,22 @@
+{
+  "name": "look-away",
+  "version": "1.0.0",
+  "description": "20-20-20 eye strain reminder widget",
+  "main": "src/main/index.js",
+  "scripts": {
+    "dev": "concurrently --kill-others -n renderer,electron -c cyan,green \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build:renderer": "vite build",
+    "build": "npm run build:renderer && electron-builder",
+    "dist": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.0.12",
+    "wait-on": "^7.2.0"
+  }
+}

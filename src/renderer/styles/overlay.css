@@ -1,0 +1,134 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── Full-screen overlay ── */
+.overlay {
+  width: 100vw;
+  height: 100vh;
+  background: rgba(8, 8, 18, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Content card ── */
+.overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  animation: fadeIn 0.35s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.overlay-eyebrow {
+  color: rgba(79, 195, 247, 0.55);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.overlay-heading {
+  color: #ffffff;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.overlay-sub {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 16px;
+  font-weight: 400;
+  margin-top: -4px;
+}
+
+/* ── Arc ── */
+.overlay-arc {
+  margin: 4px 0;
+}
+
+.arc-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ov-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ov-secs {
+  color: #4fc3f7;
+  font-size: 72px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.ov-unit {
+  color: rgba(79, 195, 247, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* ── Tip ── */
+.overlay-tip {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 15px;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* ── Skip button ── */
+.skip-btn {
+  margin-top: 6px;
+  padding: 10px 28px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.2s;
+}
+
+.skip-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.75);
+}
