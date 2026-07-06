@@ -98,26 +98,6 @@ npm run build      # → release/ 資料夾（安裝檔 + portable exe）
 
 ---
 
-## 狀態機說明
-
-```
-focus（倒數 20 分）
-   │ 時間到
-   ▼
-reminder ──「好，我知道了」──▶ ready
-                                │ 按「開始計時休息」
-                                ▼
-                              break（倒數 20 秒）
-                                │ 時間到 / Skip
-                                ▼
-                             回到 focus
-```
-
-- `tick()` **只在 focus / break 遞減**；reminder / ready 為凍結等待狀態。
-- reminder → ready 有 **400 ms 守門**，防止 Enter 鍵洩漏連鎖觸發。
-
----
-
 ## 專案結構
 
 ```
@@ -137,27 +117,6 @@ src/
 vite.config.mjs       # 多頁 build；base: './'
 electron-builder.yml  # Windows nsis + portable
 ```
-
----
-
-## 設定值
-
-| 常數 | 預設值 | 位置 |
-|------|--------|------|
-| `FOCUS_DURATION` | `20 × 60` 秒 | `src/main/index.js` |
-| `BREAK_DURATION` | `20` 秒 | `src/main/index.js` |
-| `START_GUARD_MS` | `400` ms | `src/main/index.js` |
-
-> 開發測試時可暫時把 `FOCUS_DURATION` 改小（如 `4`）快速觸發休息流程，**記得 commit 前改回來**。
-
----
-
-## 已知限制 / 未來規劃
-
-- [ ] 統計存在記憶體，**重開 App 會歸零**（未持久化）
-- [ ] 無跨日重置 `breaksToday` 的邏輯
-- [ ] 無設定畫面（間隔、開機自啟等皆為寫死）
-- [ ] Acrylic / blur 以 CSS `backdrop-filter` 近似，非 Windows 原生毛玻璃
 
 ---
 
