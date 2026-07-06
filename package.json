@@ -7,16 +7,23 @@
     "dev": "concurrently --kill-others -n renderer,electron -c cyan,green \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
-    "dist": "electron-builder --dir"
+    "dist": "electron-builder --dir",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.5.2",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
+    "jsdom": "^24.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "vite": "^5.0.12",
+    "vitest": "^1.6.0",
     "wait-on": "^7.2.0"
   }
 }

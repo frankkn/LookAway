@@ -1,21 +1,10 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron')
 const path = require('path')
+const tm = require('./timerMachine')
 
 const isDev = !app.isPackaged
-const FOCUS_DURATION = 20 * 60 // 1200 seconds
-const BREAK_DURATION = 20       // seconds
 
-// Phases:
-//   focus     – counting down 20 min to next break
-//   reminder  – focus elapsed; reminder window shown, waiting for user to acknowledge (timer frozen)
-//   ready     – acknowledged; widget shows "開始計時休息" button, waiting for user to start (timer frozen)
-//   break     – counting down 20 sec look-away
-let state = {
-  phase: 'focus',
-  remaining: FOCUS_DURATION,
-  isPaused: false,
-  stats: { breaksToday: 0, focusTime: 0 },
-}
+let state = tm.createInitialState()
 
 let timerInterval = null
 let widgetWin = null
@@ -41,27 +30,9 @@ function broadcast(data) {
 }
 
 function tick() {
-  if (state.isPaused) return
-  // reminder & ready are frozen states — they wait for the user, no countdown
-  if (state.phase !== 'focus' && state.phase !== 'break') return
-
-  state.remaining -= 1
-  if (state.phase === 'focus') state.stats.focusTime += 1
-
-  if (state.remaining <= 0) {
-    if (state.phase === 'focus') {
-      // Focus done → prompt the user (no auto-start, timer waits)
-      state.phase = 'reminder'
-      state.remaining = BREAK_DURATION // preview value for the ready/break arc
-      showReminder()
-    } else {
-      // Break done → back to focus
-      state.stats.breaksToday += 1
-      state.phase = 'focus'
-      state.remaining = FOCUS_DURATION
-    }
-  }
-
+  const prev = state
+  state = tm.tick(state)
+  if (prev.phase === 'focus' && state.phase === 'reminder') showReminder()
   broadcast({ ...state })
 }
 
@@ -185,48 +156,39 @@ function createTray() {
 
 // ── IPC handlers ──
 ipcMain.on('timer:pause', () => {
-  state.isPaused = true
+  state = tm.pause(state)
   broadcast({ ...state })
 })
 
 ipcMain.on('timer:resume', () => {
-  state.isPaused = false
+  state = tm.resume(state)
   broadcast({ ...state })
 })
 
 ipcMain.on('timer:reset', () => {
-  state.phase = 'focus'
-  state.remaining = FOCUS_DURATION
-  state.isPaused = false
+  state = tm.reset(state)
   hideReminder()
   broadcast({ ...state })
 })
 
-// User pressed "好,我知道了" in the reminder window
 ipcMain.on('break:acknowledge', () => {
-  if (state.phase !== 'reminder') return
-  state.phase = 'ready'
+  const next = tm.acknowledge(state)
+  if (next === state) return
+  state = next
   readyAt = Date.now()
   hideReminder()
   broadcast({ ...state })
 })
 
-// User pressed "▶ 開始計時休息" on the widget
 ipcMain.on('break:start', () => {
-  if (state.phase !== 'ready') return
-  // Ignore a start that fires within the guard window — it's the acknowledge
-  // Enter keystroke leaking to the freshly-focused widget, not a real click.
-  if (Date.now() - readyAt < START_GUARD_MS) return
-  state.phase = 'break'
-  state.remaining = BREAK_DURATION
+  const next = tm.startBreak(state, readyAt, Date.now())
+  if (next === state) return
+  state = next
   broadcast({ ...state })
 })
 
-// User skipped the break (available during ready or break)
 ipcMain.on('break:skip', () => {
-  state.stats.breaksToday += 1
-  state.phase = 'focus'
-  state.remaining = FOCUS_DURATION
+  state = tm.skipBreak(state)
   hideReminder()
   broadcast({ ...state })
 })
