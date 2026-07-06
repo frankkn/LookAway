@@ -79,22 +79,31 @@ npm run build      # → release/ 資料夾（安裝檔 + portable exe）
 
 ## 發版流程（維護者）
 
-自動更新的來源是 GitHub Releases,發一次新版給所有使用者只需三步:
+自動更新的來源是 GitHub Releases。
 
-1. **改版本號**：編輯 `package.json` 的 `version`（例如 `1.0.0` → `1.0.1`）。
-   > 這是自動更新的**唯一觸發依據**——版本號沒往上加,使用者就不會收到更新,即使開了新 tag 也一樣。
+### 一次性設定（只做一次）
 
-2. **打包並上傳**：
+1. **建立 GitHub Token**：GitHub → Settings → Developer settings → Personal access tokens →
+   **Tokens (classic)** → Generate,勾選 `repo` 權限,複製產生的 token（`ghp_…`）。
+2. **設為永久環境變數**（之後發版就不用再輸入）：
    ```powershell
-   $env:GH_TOKEN = "<你的 GitHub Personal Access Token>"   # 需有 repo 權限
-   npm run release      # build + 上傳 installer / portable / latest.yml 到「草稿」Release
+   [System.Environment]::SetEnvironmentVariable("GH_TOKEN", "ghp_你的token", "User")
    ```
+   設完重開 PowerShell 生效。⚠️ 不要把 token 寫進程式碼或 commit。
 
-3. **發布 Release**：到 GitHub 的 Releases 頁,把剛產生的**草稿（draft）**確認無誤後按 **Publish**。
-   - 只有正式發布的 Release 才會觸發使用者更新;草稿與 pre-release 不會。
+### 每次發新版（三步）
 
-> **GH_TOKEN** 取得:GitHub → Settings → Developer settings → Personal access tokens,
-> 建立一個有 `repo` 權限的 token。不要把 token 寫進程式碼或 commit。
+```powershell
+# 1. 改版本號（關鍵！沒往上加，使用者就不會收到更新）
+npm version patch --no-git-tag-version      # 例：1.0.0 → 1.0.1
+
+# 2. 打包並上傳到「草稿」Release
+npm run release
+
+# 3. 到 GitHub Releases 把草稿確認後按 Publish
+```
+
+> 只有正式 **Publish** 的 Release 才會觸發使用者更新；草稿（draft）與 pre-release 不會。
 
 ---
 
