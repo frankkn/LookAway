@@ -8,9 +8,9 @@
 
 ## 畫面預覽
 
-| Widget（常駐） | Reminder（提醒） |
-|:-:|:-:|
-| 右下角橘色倒數圓弧 | 置中暗色對話窗 |
+| Widget（常駐小工具） | Reminder（休息提醒） | Settings（設定） |
+|:-:|:-:|:-:|
+| <img src="docs/screenshots/widget.png" width="240" alt="Widget"> | <img src="docs/screenshots/reminder.png" width="240" alt="Reminder"> | <img src="docs/screenshots/settings.png" width="240" alt="Settings"> |
 
 ---
 
