@@ -32,6 +32,10 @@ export default function Widget() {
 
   useEffect(() => {
     window.electronAPI?.getTimerState().then(s => s && setTs(s))
+    window.electronAPI?.getSettings().then(s => {
+      if (s?.widgetFontSize)
+        document.documentElement.style.setProperty('--font-size', `${s.widgetFontSize}px`)
+    })
     const cleanup = window.electronAPI?.onTimerTick(setTs)
     return () => typeof cleanup === 'function' && cleanup()
   }, [])
@@ -73,6 +77,11 @@ export default function Widget() {
         <div className="header-dot" style={{ background: arcColor }} />
         <span className="app-title">Look Away</span>
         <div className="header-btns no-drag">
+          <button
+            className="hbtn"
+            title="Settings"
+            onClick={() => window.electronAPI?.openSettings()}
+          >⚙</button>
           <button
             className="hbtn"
             title="Hide to tray"

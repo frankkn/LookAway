@@ -2,11 +2,13 @@ const FOCUS_DURATION = 20 * 60
 const BREAK_DURATION = 20
 const START_GUARD_MS = 400
 
-function createInitialState() {
+function createInitialState(focusDuration = FOCUS_DURATION, breakDuration = BREAK_DURATION) {
   return {
     phase: 'focus',
-    remaining: FOCUS_DURATION,
+    remaining: focusDuration,
     isPaused: false,
+    focusDuration,
+    breakDuration,
     stats: { breaksToday: 0, focusTime: 0 },
   }
 }
@@ -28,11 +30,11 @@ function tick(state) {
   if (next.remaining <= 0) {
     if (state.phase === 'focus') {
       next.phase = 'reminder'
-      next.remaining = BREAK_DURATION
+      next.remaining = state.breakDuration ?? BREAK_DURATION
     } else {
       next.stats.breaksToday++
       next.phase = 'focus'
-      next.remaining = FOCUS_DURATION
+      next.remaining = state.focusDuration ?? FOCUS_DURATION
     }
   }
 
@@ -49,14 +51,14 @@ function acknowledge(state) {
 function startBreak(state, readyAt, now) {
   if (state.phase !== 'ready') return state
   if (now - readyAt < START_GUARD_MS) return state
-  return { ...state, phase: 'break', remaining: BREAK_DURATION }
+  return { ...state, phase: 'break', remaining: state.breakDuration ?? BREAK_DURATION }
 }
 
 function skipBreak(state) {
   return {
     ...state,
     phase: 'focus',
-    remaining: FOCUS_DURATION,
+    remaining: state.focusDuration ?? FOCUS_DURATION,
     stats: { ...state.stats, breaksToday: state.stats.breaksToday + 1 },
   }
 }
@@ -69,13 +71,13 @@ function resume(state) {
   return { ...state, isPaused: false }
 }
 
-// Resets timer back to focus; preserves today's stats.
+// Resets timer back to focus; preserves today's stats and durations.
 function reset(state) {
   return {
+    ...state,
     phase: 'focus',
-    remaining: FOCUS_DURATION,
+    remaining: state.focusDuration ?? FOCUS_DURATION,
     isPaused: false,
-    stats: { ...state.stats },
   }
 }
 

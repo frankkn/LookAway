@@ -14,8 +14,9 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.join(__dirname, 'src/renderer/main.html'),
+        main:     path.join(__dirname, 'src/renderer/main.html'),
         reminder: path.join(__dirname, 'src/renderer/reminder.html'),
+        settings: path.join(__dirname, 'src/renderer/settings.html'),
       }
     }
   },

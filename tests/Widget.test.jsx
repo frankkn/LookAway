@@ -7,6 +7,7 @@ import Widget from '../src/renderer/components/Widget.jsx'
 // ── mock window.electronAPI ──────────────────────────────────────────────────
 const mockAPI = {
   getTimerState: vi.fn(),
+  getSettings: vi.fn(),
   onTimerTick: vi.fn(),
   pauseTimer: vi.fn(),
   resumeTimer: vi.fn(),
@@ -15,11 +16,13 @@ const mockAPI = {
   skipBreak: vi.fn(),
   minimizeWindow: vi.fn(),
   closeWindow: vi.fn(),
+  openSettings: vi.fn(),
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   mockAPI.getTimerState.mockResolvedValue(null) // don't override DEFAULT_STATE
+  mockAPI.getSettings.mockResolvedValue(null)
   mockAPI.onTimerTick.mockReturnValue(() => {})
   Object.defineProperty(window, 'electronAPI', {
     value: mockAPI,

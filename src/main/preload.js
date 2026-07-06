@@ -17,4 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('timer:tick', handler)
     return () => ipcRenderer.removeListener('timer:tick', handler)
   },
+
+  openSettings:  () => ipcRenderer.send('settings:open'),
+  getSettings:   () => ipcRenderer.invoke('settings:get'),
+  saveSettings:  (data) => ipcRenderer.invoke('settings:save', data),
 })

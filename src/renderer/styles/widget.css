@@ -1,5 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root { --font-size: 14px; }
+
 body {
   background: transparent;
   overflow: hidden;
@@ -109,7 +111,7 @@ body {
 
 .timer-big {
   color: #ffffff;
-  font-size: 28px;
+  font-size: calc(var(--font-size) * 2);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -176,7 +178,7 @@ body {
 
 .stat-val {
   color: #4fc3f7;
-  font-size: 22px;
+  font-size: calc(var(--font-size) * 1.57);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -212,7 +214,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.65);
-  font-size: 12px;
+  font-size: calc(var(--font-size) * 0.857);
   font-weight: 500;
   cursor: pointer;
   letter-spacing: 0.02em;
