@@ -4,7 +4,7 @@
   "description": "20-20-20 eye strain reminder widget",
   "main": "src/main/index.js",
   "scripts": {
-    "dev": "concurrently --kill-others -n renderer,electron -c cyan,green \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "concurrently --kill-others -n renderer,electron -c cyan,green \"vite\" \"node scripts/start-electron.js\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
     "dist": "electron-builder --dir",
@@ -17,6 +17,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
     "jsdom": "^24.1.0",
