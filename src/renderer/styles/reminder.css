@@ -1,5 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root { --font-size: 16px; }
+
 body {
   background: transparent;
   overflow: hidden;
@@ -34,6 +36,18 @@ body {
   padding: 26px 30px;
   gap: 8px;
   animation: pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  position: relative;
+}
+
+.reminder-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  border-radius: 18px 18px 0 0;
+  -webkit-app-region: drag;
+  cursor: grab;
 }
 
 @keyframes pop {
@@ -55,7 +69,7 @@ body {
 
 .reminder-title {
   color: #ffffff;
-  font-size: 21px;
+  font-size: calc(var(--font-size) * 1.31);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -68,11 +82,20 @@ body {
 }
 
 .reminder-body {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13.5px;
-  line-height: 1.7;
-  max-width: 320px;
-  margin: 6px 0 4px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: calc(var(--font-size) * 0.94);
+  font-weight: 500;
+  line-height: 1.6;
+  margin: 4px 0 2px;
+}
+
+.reminder-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 .reminder-btn-name {
