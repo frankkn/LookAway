@@ -50,6 +50,31 @@ body {
   cursor: grab;
 }
 
+.reminder-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  z-index: 2;
+  transition: background 0.15s, color 0.15s;
+}
+.reminder-close:hover {
+  background: rgba(255, 80, 80, 0.25);
+  color: #ff6666;
+}
+
 @keyframes pop {
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }

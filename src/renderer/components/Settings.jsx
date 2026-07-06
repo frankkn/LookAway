@@ -1,28 +1,39 @@
 import React, { useState, useEffect } from 'react'
 
 const LIMITS = {
-  widgetWidth:      { min: 220, max: 500 },
-  widgetHeight:     { min: 300, max: 600 },
-  widgetFontSize:   { min: 10,  max: 26  },
-  reminderWidth:    { min: 320, max: 700 },
-  reminderHeight:   { min: 260, max: 600 },
-  reminderFontSize: { min: 10,  max: 28  },
+  widgetWidth:      { min: 200, max: 1200 },
+  widgetHeight:     { min: 200, max: 1200 },
+  widgetFontSize:   { min: 8,   max: 60   },
+  reminderWidth:    { min: 300, max: 1600 },
+  reminderHeight:   { min: 200, max: 1200 },
+  reminderFontSize: { min: 8,   max: 72   },
 }
 
 function NumInput({ value, onChange, min, max, unit, width }) {
+  // Local text state so the user can type freely; clamp only on blur / Enter.
+  const [text, setText] = useState(String(value))
+  useEffect(() => { setText(String(value)) }, [value])
+
+  const commit = () => {
+    let v = Number(text)
+    if (isNaN(v) || text === '') v = value
+    v = Math.max(min, Math.min(max, v))
+    setText(String(v))
+    onChange(v)
+  }
+
   return (
     <span className="num-wrap">
       <input
         type="number"
         className="num-input"
         style={width ? { width } : undefined}
-        value={value}
+        value={text}
         min={min}
         max={max}
-        onChange={e => {
-          const v = Number(e.target.value)
-          if (!isNaN(v)) onChange(Math.max(min, Math.min(max, v)))
-        }}
+        onChange={e => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
       />
       {unit && <span className="num-unit">{unit}</span>}
     </span>
@@ -40,6 +51,8 @@ function Row({ label, children }) {
 
 export default function Settings() {
   const [form, setForm] = useState(null)
+  const [previewingWidget, setPreviewingWidget] = useState(false)
+  const [previewingReminder, setPreviewingReminder] = useState(false)
 
   useEffect(() => {
     window.electronAPI?.getSettings().then(s => {
@@ -57,9 +70,51 @@ export default function Settings() {
     })
   }, [])
 
+  // Widget preview: apply size/font to the real widget only while toggled on
+  useEffect(() => {
+    if (!form || !previewingWidget) return
+    window.electronAPI?.previewWidget({
+      widgetWidth: form.widgetWidth,
+      widgetHeight: form.widgetHeight,
+      widgetFontSize: form.widgetFontSize,
+    })
+  }, [previewingWidget, form?.widgetWidth, form?.widgetHeight, form?.widgetFontSize])
+
+  // Reminder preview: show the reminder window only while toggled on
+  useEffect(() => {
+    if (!form || !previewingReminder) return
+    window.electronAPI?.previewReminder({
+      reminderWidth: form.reminderWidth,
+      reminderHeight: form.reminderHeight,
+      reminderFontSize: form.reminderFontSize,
+    })
+  }, [previewingReminder, form?.reminderWidth, form?.reminderHeight, form?.reminderFontSize])
+
+  // If the preview was closed via its own X, flip the toggle back off
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onReminderPreviewEnded?.(() => setPreviewingReminder(false))
+    return () => typeof cleanup === 'function' && cleanup()
+  }, [])
+
   if (!form) return <div className="settings-loading">載入中…</div>
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  const toggleWidgetPreview = () => {
+    setPreviewingWidget(p => {
+      const next = !p
+      if (!next) window.electronAPI?.stopWidgetPreview()
+      return next
+    })
+  }
+
+  const toggleReminderPreview = () => {
+    setPreviewingReminder(p => {
+      const next = !p
+      if (!next) window.electronAPI?.stopReminderPreview()
+      return next
+    })
+  }
 
   const handleSave = () => {
     const { focusH, focusM, focusS, breakM, breakS, ...rest } = form
@@ -114,6 +169,12 @@ export default function Settings() {
             <NumInput value={form.widgetFontSize} onChange={v => set('widgetFontSize', v)}
               min={LIMITS.widgetFontSize.min} max={LIMITS.widgetFontSize.max} unit="px" />
           </Row>
+          <button
+            className={`btn-preview ${previewingWidget ? 'is-on' : ''}`}
+            onClick={toggleWidgetPreview}
+          >
+            {previewingWidget ? '✕ 停止預覽' : '👁 預覽主視窗'}
+          </button>
         </section>
 
         <section className="setting-section">
@@ -129,6 +190,12 @@ export default function Settings() {
             <NumInput value={form.reminderFontSize} onChange={v => set('reminderFontSize', v)}
               min={LIMITS.reminderFontSize.min} max={LIMITS.reminderFontSize.max} unit="px" />
           </Row>
+          <button
+            className={`btn-preview ${previewingReminder ? 'is-on' : ''}`}
+            onClick={toggleReminderPreview}
+          >
+            {previewingReminder ? '✕ 隱藏預覽' : '👁 預覽提醒視窗'}
+          </button>
         </section>
 
       </div>

@@ -10,10 +10,22 @@ body {
   user-select: none;
 }
 
+/* Fill the window and center the scaled widget canvas */
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ── Widget shell ── */
 .widget {
+  /* Fixed design canvas — scaled as a whole to fit the window */
   width: 280px;
   height: 360px;
+  transform: scale(var(--scale, 1));
+  transform-origin: center center;
   background: rgba(20, 20, 38, 0.90);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 18px;

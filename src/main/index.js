@@ -48,14 +48,24 @@ function repositionWidget(w, h) {
   widgetWin.setPosition(workAreaSize.width - w - 20, workAreaSize.height - h - 20)
 }
 
+// On Windows, setSize() is ignored on a window created with resizable:false,
+// so briefly re-enable resizing around the call.
+function resizeWindow(win, w, h) {
+  if (!win || win.isDestroyed()) return
+  const wasResizable = win.isResizable()
+  win.setResizable(true)
+  win.setSize(Math.round(w), Math.round(h))
+  win.setResizable(wasResizable)
+}
+
 function applySettings(s) {
   if (widgetWin && !widgetWin.isDestroyed()) {
-    widgetWin.setSize(s.widgetWidth, s.widgetHeight)
+    resizeWindow(widgetWin, s.widgetWidth, s.widgetHeight)
     repositionWidget(s.widgetWidth, s.widgetHeight)
     applyFontSize(widgetWin, s.widgetFontSize)
   }
   if (reminderWin && !reminderWin.isDestroyed()) {
-    reminderWin.setSize(s.reminderWidth, s.reminderHeight)
+    resizeWindow(reminderWin, s.reminderWidth, s.reminderHeight)
     applyFontSize(reminderWin, s.reminderFontSize)
   }
   // Update timer durations in state
@@ -80,6 +90,7 @@ function centerReminder() {
 
 function showReminder() {
   if (!reminderWin || reminderWin.isDestroyed()) return
+  reminderWin.webContents.send('reminder:preview-mode', false) // real break, no close X
   centerReminder()
   reminderWin.show()
   reminderWin.setAlwaysOnTop(true, 'screen-saver')
@@ -158,7 +169,12 @@ function createSettingsWindow() {
   })
 
   settingsWin.loadURL(rendererUrl('settings'))
-  settingsWin.on('closed', () => { settingsWin = null })
+  settingsWin.on('closed', () => {
+    settingsWin = null
+    // Revert any live preview back to the saved settings
+    applySettings(settings)
+    if (state.phase !== 'reminder') hideReminder()
+  })
   if (isDev) settingsWin.webContents.openDevTools({ mode: 'detach' })
 }
 
@@ -235,14 +251,56 @@ ipcMain.on('window:minimize', () => {
     })
   }
 })
-ipcMain.on('window:close',    () => {
-  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close()
+ipcMain.on('window:close', (event) => {
+  // Close the window that actually sent the request; only the widget quits the app
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win && win === settingsWin) win.close()
   else app.quit()
 })
 
 ipcMain.handle('timer:getState', () => ({ ...state }))
 
 ipcMain.on('settings:open', () => createSettingsWindow())
+
+// ── live preview (does not persist) ──
+ipcMain.on('settings:preview-widget', (_, s) => {
+  if (!widgetWin || widgetWin.isDestroyed()) return
+  if (s.widgetWidth && s.widgetHeight) {
+    resizeWindow(widgetWin, s.widgetWidth, s.widgetHeight)
+    repositionWidget(s.widgetWidth, s.widgetHeight)
+  }
+  if (s.widgetFontSize) applyFontSize(widgetWin, s.widgetFontSize)
+})
+
+ipcMain.on('widget:preview-stop', () => {
+  // Revert the widget to the saved size/font
+  if (!widgetWin || widgetWin.isDestroyed()) return
+  resizeWindow(widgetWin, settings.widgetWidth, settings.widgetHeight)
+  repositionWidget(settings.widgetWidth, settings.widgetHeight)
+  applyFontSize(widgetWin, settings.widgetFontSize)
+})
+
+ipcMain.on('reminder:preview', (_, s) => {
+  if (!reminderWin || reminderWin.isDestroyed()) return
+  if (s.reminderWidth && s.reminderHeight) resizeWindow(reminderWin, s.reminderWidth, s.reminderHeight)
+  if (s.reminderFontSize) applyFontSize(reminderWin, s.reminderFontSize)
+  reminderWin.webContents.send('reminder:preview-mode', true) // show the close X
+  centerReminder()
+  reminderWin.showInactive() // show without stealing focus from the settings window
+  reminderWin.setAlwaysOnTop(true, 'floating')
+})
+
+ipcMain.on('reminder:preview-stop', () => {
+  if (state.phase !== 'reminder') hideReminder()
+})
+
+// The X on the preview window: hide it and let settings flip its toggle off
+ipcMain.on('reminder:preview-close', () => {
+  if (state.phase !== 'reminder') hideReminder()
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.webContents.send('reminder:preview-ended')
+  }
+})
 
 ipcMain.handle('settings:get', () => ({ ...settings }))
 

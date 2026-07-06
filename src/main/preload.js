@@ -21,4 +21,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openSettings:  () => ipcRenderer.send('settings:open'),
   getSettings:   () => ipcRenderer.invoke('settings:get'),
   saveSettings:  (data) => ipcRenderer.invoke('settings:save', data),
+
+  // Live preview (no persistence) while the settings window is open
+  previewWidget:       (s) => ipcRenderer.send('settings:preview-widget', s),
+  stopWidgetPreview:   ()  => ipcRenderer.send('widget:preview-stop'),
+  previewReminder:     (s) => ipcRenderer.send('reminder:preview', s),
+  stopReminderPreview: ()  => ipcRenderer.send('reminder:preview-stop'),
+
+  // Reminder window: know when it is in preview mode (to show a close X),
+  // let its X close the preview, and let settings know the preview ended.
+  closeReminderPreview: () => ipcRenderer.send('reminder:preview-close'),
+  onReminderPreviewMode: (cb) => {
+    const handler = (_, on) => cb(on)
+    ipcRenderer.on('reminder:preview-mode', handler)
+    return () => ipcRenderer.removeListener('reminder:preview-mode', handler)
+  },
+  onReminderPreviewEnded: (cb) => {
+    const handler = () => cb()
+    ipcRenderer.on('reminder:preview-ended', handler)
+    return () => ipcRenderer.removeListener('reminder:preview-ended', handler)
+  },
 })

@@ -40,7 +40,23 @@ export default function Widget() {
     return () => typeof cleanup === 'function' && cleanup()
   }, [])
 
+  // Scale the whole 280×360 canvas proportionally to fill the window
+  useEffect(() => {
+    const BASE_W = 280
+    const BASE_H = 360
+    const update = () => {
+      const k = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H)
+      document.documentElement.style.setProperty('--scale', String(k))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   const { phase, remaining, isPaused, stats } = ts
+  // Durations come from the main process (user-configurable); fall back to defaults
+  const focusDur = ts.focusDuration || FOCUS_DURATION
+  const breakDur = ts.breakDuration || BREAK_DURATION
 
   // Per-phase display config
   let arcColor = ORANGE
@@ -50,7 +66,7 @@ export default function Widget() {
 
   if (phase === 'focus') {
     arcColor = ORANGE
-    progress = remaining / FOCUS_DURATION
+    progress = remaining / focusDur
     bigText = fmt(remaining)
     subText = 'until break'
   } else if (phase === 'reminder') {
@@ -61,11 +77,11 @@ export default function Widget() {
   } else if (phase === 'ready') {
     arcColor = BLUE
     progress = 1
-    bigText = '20'
+    bigText = String(breakDur)
     subText = '秒 · 準備護眼'
   } else if (phase === 'break') {
     arcColor = BLUE
-    progress = remaining / BREAK_DURATION
+    progress = remaining / breakDur
     bigText = String(remaining)
     subText = '看向遠方'
   }
