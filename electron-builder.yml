@@ -18,7 +18,14 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 
+publish:
+  provider: github
+  owner: frankkn
+  repo: LookAway
+
 files:
   - src/main/**
   - dist/renderer/**
   - package.json
+  # Production dependencies (electron-updater) — dev deps are pruned automatically
+  - node_modules/**/*

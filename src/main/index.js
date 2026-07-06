@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require
 const path = require('path')
 const tm = require('./timerMachine')
 const cfg = require('./settings')
+const updater = require('./updater')
 
 const isDev = !app.isPackaged
 
@@ -184,25 +185,50 @@ function createSettingsWindow() {
   if (isDev) settingsWin.webContents.openDevTools({ mode: 'detach' })
 }
 
-// Draw a filled orange disc on a transparent background.
+// Draw an orange eye (almond outline + centered pupil) on a transparent
+// background. Rendered at 2× (32px buffer, scaleFactor 2) with 3×3 supersampling
+// for smooth edges at tray size.
 // NOTE: Windows tray bitmaps are BGRA, so blue and red bytes are swapped
 // relative to the intuitive RGBA order.
 function makeTrayIcon() {
-  const size = 16
-  const c = (size - 1) / 2
-  const r = 7
+  const size = 32
+  const cx = (size - 1) / 2
+  const cy = (size - 1) / 2
+  const A = size * 0.46          // eye half-width
+  const B = size * 0.30          // eye half-height
+  const inA = A - size * 0.11    // inner edge of the almond outline
+  const inB = B - size * 0.11
+  const pupilR = size * 0.15
+
+  // Is this (sub)pixel part of the orange glyph?
+  const covered = (px, py) => {
+    const dx = px - cx
+    const dy = py - cy
+    const outer = (dx * dx) / (A * A) + (dy * dy) / (B * B)
+    const inner = (dx * dx) / (inA * inA) + (dy * dy) / (inB * inB)
+    const onOutline = outer <= 1 && inner >= 1
+    const inPupil = dx * dx + dy * dy <= pupilR * pupilR
+    return onOutline || inPupil
+  }
+
   const buf = Buffer.alloc(size * size * 4)
+  const N = 3 // supersampling grid
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
+      let hits = 0
+      for (let sy = 0; sy < N; sy++) {
+        for (let sx = 0; sx < N; sx++) {
+          if (covered(x + (sx + 0.5) / N - 0.5, y + (sy + 0.5) / N - 0.5)) hits++
+        }
+      }
       const i = (y * size + x) * 4
-      const inside = (x - c) ** 2 + (y - c) ** 2 <= r * r
       buf[i + 0] = 0x35 // B
       buf[i + 1] = 0x6b // G
       buf[i + 2] = 0xff // R
-      buf[i + 3] = inside ? 0xff : 0x00 // A
+      buf[i + 3] = Math.round((hits / (N * N)) * 255) // A
     }
   }
-  return nativeImage.createFromBuffer(buf, { width: size, height: size, scaleFactor: 1 })
+  return nativeImage.createFromBuffer(buf, { width: size, height: size, scaleFactor: 2 })
 }
 
 function createTray() {
@@ -212,6 +238,7 @@ function createTray() {
   const menu = Menu.buildFromTemplate([
     { label: 'Show Widget', click: () => { widgetWin?.show(); widgetWin?.setAlwaysOnTop(true, 'floating') } },
     { label: 'Settings',    click: () => createSettingsWindow() },
+    { label: '檢查更新',     click: () => updater.checkForUpdatesManually() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ])
@@ -324,6 +351,7 @@ app.whenReady().then(() => {
   createReminderWindow()
   createTray()
   timerInterval = setInterval(tick, 1000)
+  updater.initAutoUpdate() // silent check on startup (packaged builds only)
 })
 
 app.on('window-all-closed', () => { /* keep running in tray */ })

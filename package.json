@@ -2,11 +2,13 @@
   "name": "look-away",
   "version": "1.0.0",
   "description": "20-20-20 eye strain reminder widget",
+  "author": "Frank Yang",
   "main": "src/main/index.js",
   "scripts": {
     "dev": "concurrently --kill-others -n renderer,electron -c cyan,green \"vite\" \"node scripts/start-electron.js\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
+    "release": "npm run build:renderer && electron-builder --publish always",
     "dist": "electron-builder --dir",
     "test": "vitest",
     "test:run": "vitest run"
@@ -26,5 +28,8 @@
     "vite": "^5.0.12",
     "vitest": "^1.6.0",
     "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
