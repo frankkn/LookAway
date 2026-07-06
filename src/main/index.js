@@ -5,6 +5,11 @@ const isDev = !app.isPackaged
 const FOCUS_DURATION = 20 * 60 // 1200 seconds
 const BREAK_DURATION = 20       // seconds
 
+// Phases:
+//   focus     – counting down 20 min to next break
+//   reminder  – focus elapsed; reminder window shown, waiting for user to acknowledge (timer frozen)
+//   ready     – acknowledged; widget shows "開始計時休息" button, waiting for user to start (timer frozen)
+//   break     – counting down 20 sec look-away
 let state = {
   phase: 'focus',
   remaining: FOCUS_DURATION,
@@ -14,7 +19,7 @@ let state = {
 
 let timerInterval = null
 let widgetWin = null
-let overlayWin = null
+let reminderWin = null
 let tray = null
 
 function rendererUrl(page) {
@@ -23,7 +28,7 @@ function rendererUrl(page) {
 }
 
 function broadcast(data) {
-  ;[widgetWin, overlayWin].forEach(win => {
+  ;[widgetWin, reminderWin].forEach(win => {
     if (win && !win.isDestroyed()) {
       win.webContents.send('timer:tick', data)
     }
@@ -32,36 +37,51 @@ function broadcast(data) {
 
 function tick() {
   if (state.isPaused) return
+  // reminder & ready are frozen states — they wait for the user, no countdown
+  if (state.phase !== 'focus' && state.phase !== 'break') return
 
   state.remaining -= 1
   if (state.phase === 'focus') state.stats.focusTime += 1
 
   if (state.remaining <= 0) {
     if (state.phase === 'focus') {
-      state.phase = 'break'
-      state.remaining = BREAK_DURATION
-      showOverlay()
+      // Focus done → prompt the user (no auto-start, timer waits)
+      state.phase = 'reminder'
+      state.remaining = BREAK_DURATION // preview value for the ready/break arc
+      showReminder()
     } else {
+      // Break done → back to focus
       state.stats.breaksToday += 1
       state.phase = 'focus'
       state.remaining = FOCUS_DURATION
-      hideOverlay()
     }
   }
 
   broadcast({ ...state })
 }
 
-function showOverlay() {
-  if (!overlayWin || overlayWin.isDestroyed()) return
-  overlayWin.show()
-  overlayWin.setAlwaysOnTop(true, 'screen-saver')
-  overlayWin.focus()
+function centerReminder() {
+  if (!reminderWin || reminderWin.isDestroyed()) return
+  const { workArea } = screen.getPrimaryDisplay()
+  const [w, h] = reminderWin.getSize()
+  reminderWin.setPosition(
+    Math.round(workArea.x + (workArea.width - w) / 2),
+    Math.round(workArea.y + (workArea.height - h) / 2)
+  )
 }
 
-function hideOverlay() {
-  if (!overlayWin || overlayWin.isDestroyed()) return
-  overlayWin.hide()
+function showReminder() {
+  if (!reminderWin || reminderWin.isDestroyed()) return
+  centerReminder()
+  reminderWin.show()
+  reminderWin.setAlwaysOnTop(true, 'screen-saver')
+  reminderWin.moveTop()
+  reminderWin.focus()
+}
+
+function hideReminder() {
+  if (!reminderWin || reminderWin.isDestroyed()) return
+  reminderWin.hide()
   widgetWin?.focus()
 }
 
@@ -98,14 +118,10 @@ function createWidgetWindow() {
   }
 }
 
-function createOverlayWindow() {
-  const { bounds } = screen.getPrimaryDisplay()
-
-  overlayWin = new BrowserWindow({
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
+function createReminderWindow() {
+  reminderWin = new BrowserWindow({
+    width: 400,
+    height: 300,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -120,15 +136,16 @@ function createOverlayWindow() {
     },
   })
 
-  overlayWin.loadURL(rendererUrl('overlay'))
+  reminderWin.loadURL(rendererUrl('reminder'))
+  centerReminder()
 
-  overlayWin.webContents.on('did-finish-load', () => {
+  reminderWin.webContents.on('did-finish-load', () => {
     broadcast({ ...state })
   })
 }
 
 function createTray() {
-  // Tiny 1-pixel orange icon generated in memory
+  // Tiny orange icon generated in memory
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
   for (let i = 0; i < size * size; i++) {
@@ -161,7 +178,7 @@ function createTray() {
   })
 }
 
-// IPC handlers
+// ── IPC handlers ──
 ipcMain.on('timer:pause', () => {
   state.isPaused = true
   broadcast({ ...state })
@@ -176,15 +193,32 @@ ipcMain.on('timer:reset', () => {
   state.phase = 'focus'
   state.remaining = FOCUS_DURATION
   state.isPaused = false
-  hideOverlay()
+  hideReminder()
   broadcast({ ...state })
 })
 
+// User pressed "好,我知道了" in the reminder window
+ipcMain.on('break:acknowledge', () => {
+  if (state.phase !== 'reminder') return
+  state.phase = 'ready'
+  hideReminder()
+  broadcast({ ...state })
+})
+
+// User pressed "▶ 開始計時休息" on the widget
+ipcMain.on('break:start', () => {
+  if (state.phase !== 'ready') return
+  state.phase = 'break'
+  state.remaining = BREAK_DURATION
+  broadcast({ ...state })
+})
+
+// User skipped the break (available during ready or break)
 ipcMain.on('break:skip', () => {
   state.stats.breaksToday += 1
   state.phase = 'focus'
   state.remaining = FOCUS_DURATION
-  hideOverlay()
+  hideReminder()
   broadcast({ ...state })
 })
 
@@ -195,7 +229,7 @@ ipcMain.handle('timer:getState', () => ({ ...state }))
 
 app.whenReady().then(() => {
   createWidgetWindow()
-  createOverlayWindow()
+  createReminderWindow()
   createTray()
   timerInterval = setInterval(tick, 1000)
 })

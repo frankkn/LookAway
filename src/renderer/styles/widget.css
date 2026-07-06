@@ -3,7 +3,7 @@
 body {
   background: transparent;
   overflow: hidden;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Segoe UI', 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -114,6 +114,16 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+.timer-emoji {
+  font-size: 40px;
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.15); }
 }
 
 .timer-sub {
@@ -227,4 +237,50 @@ body {
 .btn-reset:hover {
   border-color: rgba(79, 195, 247, 0.35);
   color: #7dd6f7;
+}
+
+/* ── Phase-specific controls ── */
+.btn-start {
+  flex: 1;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #ff8c5a, #ff6b35);
+  box-shadow: 0 5px 16px rgba(255, 107, 53, 0.32);
+  animation: startPulse 1.8s ease-in-out infinite;
+}
+.btn-start:hover {
+  filter: brightness(1.08);
+  background: linear-gradient(135deg, #ff8c5a, #ff6b35);
+  box-shadow: 0 7px 20px rgba(255, 107, 53, 0.45);
+}
+.btn-start:active { transform: translateY(1px) scale(0.99); }
+
+@keyframes startPulse {
+  0%, 100% { box-shadow: 0 5px 16px rgba(255, 107, 53, 0.30); }
+  50%      { box-shadow: 0 5px 22px rgba(255, 107, 53, 0.55); }
+}
+
+.btn-skip {
+  flex: 1;
+  border-color: rgba(79, 195, 247, 0.30);
+  color: #7dd6f7;
+}
+.btn-skip:hover {
+  background: rgba(79, 195, 247, 0.12);
+  border-color: rgba(79, 195, 247, 0.5);
+  color: #a5e3fb;
+}
+
+.ctrl-hint {
+  flex: 1;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
 }

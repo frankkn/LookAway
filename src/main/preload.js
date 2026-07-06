@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pauseTimer:   () => ipcRenderer.send('timer:pause'),
   resumeTimer:  () => ipcRenderer.send('timer:resume'),
   resetTimer:   () => ipcRenderer.send('timer:reset'),
+  acknowledgeBreak: () => ipcRenderer.send('break:acknowledge'),
+  startBreak:   () => ipcRenderer.send('break:start'),
   skipBreak:    () => ipcRenderer.send('break:skip'),
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   closeWindow:  () => ipcRenderer.send('window:close'),

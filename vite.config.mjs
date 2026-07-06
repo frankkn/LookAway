@@ -15,7 +15,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.join(__dirname, 'src/renderer/main.html'),
-        overlay: path.join(__dirname, 'src/renderer/overlay.html'),
+        reminder: path.join(__dirname, 'src/renderer/reminder.html'),
       }
     }
   },
