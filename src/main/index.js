@@ -147,9 +147,10 @@ function createSettingsWindow() {
   }
 
   settingsWin = new BrowserWindow({
-    width: 380, height: 460,
+    width: 400, height: 480,
+    minWidth: 340, minHeight: 380,
     frame: false, transparent: true, alwaysOnTop: true,
-    resizable: false, skipTaskbar: true, hasShadow: false,
+    resizable: true, skipTaskbar: true, hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false,

@@ -7,16 +7,15 @@ const LIMITS = {
   reminderWidth:    { min: 320, max: 700 },
   reminderHeight:   { min: 260, max: 600 },
   reminderFontSize: { min: 10,  max: 28  },
-  focusMins:        { min: 1,   max: 60  },
-  breakSecs:        { min: 5,   max: 300 },
 }
 
-function NumInput({ value, onChange, min, max, unit }) {
+function NumInput({ value, onChange, min, max, unit, width }) {
   return (
     <span className="num-wrap">
       <input
         type="number"
         className="num-input"
+        style={width ? { width } : undefined}
         value={value}
         min={min}
         max={max}
@@ -45,7 +44,16 @@ export default function Settings() {
   useEffect(() => {
     window.electronAPI?.getSettings().then(s => {
       if (!s) return
-      setForm({ ...s, focusMins: Math.round(s.focusDuration / 60), breakSecs: s.breakDuration })
+      const f = s.focusDuration
+      const b = s.breakDuration
+      setForm({
+        ...s,
+        focusH: Math.floor(f / 3600),
+        focusM: Math.floor((f % 3600) / 60),
+        focusS: f % 60,
+        breakM: Math.floor(b / 60),
+        breakS: b % 60,
+      })
     })
   }, [])
 
@@ -54,10 +62,14 @@ export default function Settings() {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
 
   const handleSave = () => {
+    const { focusH, focusM, focusS, breakM, breakS, ...rest } = form
+    const focusDuration = focusH * 3600 + focusM * 60 + focusS
+    const breakDuration = breakM * 60 + breakS
     window.electronAPI?.saveSettings({
-      ...form,
-      focusDuration: form.focusMins * 60,
-      breakDuration: form.breakSecs,
+      ...rest,
+      // Guard against an all-zero entry that would break the countdown
+      focusDuration: Math.max(5, focusDuration),
+      breakDuration: Math.max(5, breakDuration),
     })
   }
 
@@ -74,12 +86,18 @@ export default function Settings() {
         <section className="setting-section">
           <h2 className="section-title">計時</h2>
           <Row label="工作時長">
-            <NumInput value={form.focusMins} onChange={v => set('focusMins', v)}
-              min={LIMITS.focusMins.min} max={LIMITS.focusMins.max} unit="分鐘" />
+            <NumInput value={form.focusH} onChange={v => set('focusH', v)}
+              min={0} max={8}  unit="時" width={44} />
+            <NumInput value={form.focusM} onChange={v => set('focusM', v)}
+              min={0} max={59} unit="分" width={44} />
+            <NumInput value={form.focusS} onChange={v => set('focusS', v)}
+              min={0} max={59} unit="秒" width={44} />
           </Row>
           <Row label="休息時長">
-            <NumInput value={form.breakSecs} onChange={v => set('breakSecs', v)}
-              min={LIMITS.breakSecs.min} max={LIMITS.breakSecs.max} unit="秒" />
+            <NumInput value={form.breakM} onChange={v => set('breakM', v)}
+              min={0} max={59} unit="分" width={44} />
+            <NumInput value={form.breakS} onChange={v => set('breakS', v)}
+              min={0} max={59} unit="秒" width={44} />
           </Row>
         </section>
 

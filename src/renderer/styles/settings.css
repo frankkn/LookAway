@@ -106,7 +106,10 @@ body {
 }
 .num-input:focus { border-color: rgba(79, 195, 247, 0.5); }
 .num-input::-webkit-inner-spin-button,
-.num-input::-webkit-outer-spin-button { opacity: 0.4; }
+.num-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 .num-unit {
   font-size: 12px;
