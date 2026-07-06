@@ -22,6 +22,11 @@ let widgetWin = null
 let reminderWin = null
 let tray = null
 
+// Guard: ignore a break:start that arrives right after acknowledge, so a single
+// keyboard Enter on the reminder can't chain through and skip the 'ready' step.
+let readyAt = 0
+const START_GUARD_MS = 400
+
 function rendererUrl(page) {
   if (isDev) return `http://localhost:5173/${page}.html`
   return `file://${path.join(__dirname, '../../dist/renderer', `${page}.html`)}`
@@ -201,6 +206,7 @@ ipcMain.on('timer:reset', () => {
 ipcMain.on('break:acknowledge', () => {
   if (state.phase !== 'reminder') return
   state.phase = 'ready'
+  readyAt = Date.now()
   hideReminder()
   broadcast({ ...state })
 })
@@ -208,6 +214,9 @@ ipcMain.on('break:acknowledge', () => {
 // User pressed "▶ 開始計時休息" on the widget
 ipcMain.on('break:start', () => {
   if (state.phase !== 'ready') return
+  // Ignore a start that fires within the guard window — it's the acknowledge
+  // Enter keystroke leaking to the freshly-focused widget, not a real click.
+  if (Date.now() - readyAt < START_GUARD_MS) return
   state.phase = 'break'
   state.remaining = BREAK_DURATION
   broadcast({ ...state })
