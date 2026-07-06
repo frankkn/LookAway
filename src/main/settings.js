@@ -6,7 +6,7 @@ let _app = null
 const DEFAULTS = {
   widgetWidth: 280,
   widgetHeight: 360,
-  widgetFontSize: 14,
+  widgetScale: 1,          // zoom multiplier for the whole widget
   reminderWidth: 460,
   reminderHeight: 360,
   reminderFontSize: 16,

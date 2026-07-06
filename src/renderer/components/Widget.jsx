@@ -32,10 +32,6 @@ export default function Widget() {
 
   useEffect(() => {
     window.electronAPI?.getTimerState().then(s => s && setTs(s))
-    window.electronAPI?.getSettings().then(s => {
-      if (s?.widgetFontSize)
-        document.documentElement.style.setProperty('--font-size', `${s.widgetFontSize}px`)
-    })
     const cleanup = window.electronAPI?.onTimerTick(setTs)
     return () => typeof cleanup === 'function' && cleanup()
   }, [])

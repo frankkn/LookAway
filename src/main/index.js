@@ -48,6 +48,13 @@ function repositionWidget(w, h) {
   widgetWin.setPosition(workAreaSize.width - w - 20, workAreaSize.height - h - 20)
 }
 
+// Actual widget window size = base size × zoom. Content fills it via the
+// renderer's proportional transform, so text + arc + buttons scale together.
+function widgetSize(s) {
+  const z = s.widgetScale || 1
+  return [Math.round(s.widgetWidth * z), Math.round(s.widgetHeight * z)]
+}
+
 // On Windows, setSize() is ignored on a window created with resizable:false,
 // so briefly re-enable resizing around the call.
 function resizeWindow(win, w, h) {
@@ -60,9 +67,9 @@ function resizeWindow(win, w, h) {
 
 function applySettings(s) {
   if (widgetWin && !widgetWin.isDestroyed()) {
-    resizeWindow(widgetWin, s.widgetWidth, s.widgetHeight)
-    repositionWidget(s.widgetWidth, s.widgetHeight)
-    applyFontSize(widgetWin, s.widgetFontSize)
+    const [w, h] = widgetSize(s)
+    resizeWindow(widgetWin, w, h)
+    repositionWidget(w, h)
   }
   if (reminderWin && !reminderWin.isDestroyed()) {
     resizeWindow(reminderWin, s.reminderWidth, s.reminderHeight)
@@ -106,7 +113,7 @@ function hideReminder() {
 
 function createWidgetWindow() {
   const { workAreaSize } = screen.getPrimaryDisplay()
-  const { widgetWidth: w, widgetHeight: h } = settings
+  const [w, h] = widgetSize(settings)
 
   widgetWin = new BrowserWindow({
     width: w, height: h,
@@ -124,7 +131,6 @@ function createWidgetWindow() {
   widgetWin.loadURL(rendererUrl('main'))
   widgetWin.webContents.on('did-finish-load', () => {
     broadcast({ ...state })
-    applyFontSize(widgetWin, settings.widgetFontSize)
   })
 
   if (isDev) widgetWin.webContents.openDevTools({ mode: 'detach' })
@@ -266,18 +272,18 @@ ipcMain.on('settings:open', () => createSettingsWindow())
 ipcMain.on('settings:preview-widget', (_, s) => {
   if (!widgetWin || widgetWin.isDestroyed()) return
   if (s.widgetWidth && s.widgetHeight) {
-    resizeWindow(widgetWin, s.widgetWidth, s.widgetHeight)
-    repositionWidget(s.widgetWidth, s.widgetHeight)
+    const [w, h] = widgetSize(s)
+    resizeWindow(widgetWin, w, h)
+    repositionWidget(w, h)
   }
-  if (s.widgetFontSize) applyFontSize(widgetWin, s.widgetFontSize)
 })
 
 ipcMain.on('widget:preview-stop', () => {
-  // Revert the widget to the saved size/font
+  // Revert the widget to the saved size
   if (!widgetWin || widgetWin.isDestroyed()) return
-  resizeWindow(widgetWin, settings.widgetWidth, settings.widgetHeight)
-  repositionWidget(settings.widgetWidth, settings.widgetHeight)
-  applyFontSize(widgetWin, settings.widgetFontSize)
+  const [w, h] = widgetSize(settings)
+  resizeWindow(widgetWin, w, h)
+  repositionWidget(w, h)
 })
 
 ipcMain.on('reminder:preview', (_, s) => {

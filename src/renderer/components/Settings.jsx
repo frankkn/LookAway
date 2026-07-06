@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 const LIMITS = {
   widgetWidth:      { min: 200, max: 1200 },
   widgetHeight:     { min: 200, max: 1200 },
-  widgetFontSize:   { min: 8,   max: 60   },
+  widgetScalePct:   { min: 50,  max: 300  },
   reminderWidth:    { min: 300, max: 1600 },
   reminderHeight:   { min: 200, max: 1200 },
   reminderFontSize: { min: 8,   max: 72   },
@@ -66,19 +66,20 @@ export default function Settings() {
         focusS: f % 60,
         breakM: Math.floor(b / 60),
         breakS: b % 60,
+        widgetScalePct: Math.round((s.widgetScale ?? 1) * 100),
       })
     })
   }, [])
 
-  // Widget preview: apply size/font to the real widget only while toggled on
+  // Widget preview: apply size/zoom to the real widget only while toggled on
   useEffect(() => {
     if (!form || !previewingWidget) return
     window.electronAPI?.previewWidget({
       widgetWidth: form.widgetWidth,
       widgetHeight: form.widgetHeight,
-      widgetFontSize: form.widgetFontSize,
+      widgetScale: form.widgetScalePct / 100,
     })
-  }, [previewingWidget, form?.widgetWidth, form?.widgetHeight, form?.widgetFontSize])
+  }, [previewingWidget, form?.widgetWidth, form?.widgetHeight, form?.widgetScalePct])
 
   // Reminder preview: show the reminder window only while toggled on
   useEffect(() => {
@@ -117,11 +118,12 @@ export default function Settings() {
   }
 
   const handleSave = () => {
-    const { focusH, focusM, focusS, breakM, breakS, ...rest } = form
+    const { focusH, focusM, focusS, breakM, breakS, widgetScalePct, ...rest } = form
     const focusDuration = focusH * 3600 + focusM * 60 + focusS
     const breakDuration = breakM * 60 + breakS
     window.electronAPI?.saveSettings({
       ...rest,
+      widgetScale: widgetScalePct / 100,
       // Guard against an all-zero entry that would break the countdown
       focusDuration: Math.max(5, focusDuration),
       breakDuration: Math.max(5, breakDuration),
@@ -165,9 +167,9 @@ export default function Settings() {
             <NumInput value={form.widgetHeight} onChange={v => set('widgetHeight', v)}
               min={LIMITS.widgetHeight.min} max={LIMITS.widgetHeight.max} unit="px" />
           </Row>
-          <Row label="字體大小">
-            <NumInput value={form.widgetFontSize} onChange={v => set('widgetFontSize', v)}
-              min={LIMITS.widgetFontSize.min} max={LIMITS.widgetFontSize.max} unit="px" />
+          <Row label="整體縮放">
+            <NumInput value={form.widgetScalePct} onChange={v => set('widgetScalePct', v)}
+              min={LIMITS.widgetScalePct.min} max={LIMITS.widgetScalePct.max} unit="%" />
           </Row>
           <button
             className={`btn-preview ${previewingWidget ? 'is-on' : ''}`}
