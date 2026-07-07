@@ -7,6 +7,7 @@ import {
   tick,
   acknowledge,
   startBreak,
+  startFocus,
   skipBreak,
   pause,
   resume,
@@ -61,6 +62,11 @@ describe('tick', () => {
     expect(tick(s)).toBe(s)
   })
 
+  it('returns same reference in done phase (frozen)', () => {
+    const s = { ...createInitialState(), phase: 'done' }
+    expect(tick(s)).toBe(s)
+  })
+
   it('transitions focus → reminder when remaining reaches 0', () => {
     const s = { ...createInitialState(), remaining: 1 }
     const next = tick(s)
@@ -81,10 +87,10 @@ describe('tick', () => {
     expect(next.phase).toBe('break')
   })
 
-  it('transitions break → focus and increments breaksToday when remaining reaches 0', () => {
+  it('transitions break → done (frozen) and increments breaksToday when remaining reaches 0', () => {
     const s = { ...createInitialState(), phase: 'break', remaining: 1 }
     const next = tick(s)
-    expect(next.phase).toBe('focus')
+    expect(next.phase).toBe('done')
     expect(next.remaining).toBe(FOCUS_DURATION)
     expect(next.stats.breaksToday).toBe(1)
   })
@@ -141,6 +147,27 @@ describe('startBreak', () => {
   })
 })
 
+describe('startFocus', () => {
+  it('transitions done → focus with full duration', () => {
+    const s = { ...createInitialState(), phase: 'done' }
+    const next = startFocus(s)
+    expect(next.phase).toBe('focus')
+    expect(next.remaining).toBe(FOCUS_DURATION)
+  })
+
+  it('does not touch stats', () => {
+    const s = { ...createInitialState(), phase: 'done', stats: { breaksToday: 2, focusTime: 100 } }
+    expect(startFocus(s).stats).toEqual({ breaksToday: 2, focusTime: 100 })
+  })
+
+  it('returns same reference outside done phase', () => {
+    for (const phase of ['focus', 'reminder', 'ready', 'break']) {
+      const s = { ...createInitialState(), phase }
+      expect(startFocus(s)).toBe(s)
+    }
+  })
+})
+
 describe('skipBreak', () => {
   it('transitions break → focus with full duration', () => {
     const s = { ...createInitialState(), phase: 'break', remaining: 10 }
@@ -155,7 +182,7 @@ describe('skipBreak', () => {
   })
 
   it('returns same reference outside break phase (double-click on Skip)', () => {
-    for (const phase of ['focus', 'reminder', 'ready']) {
+    for (const phase of ['focus', 'reminder', 'ready', 'done']) {
       const s = { ...createInitialState(), phase }
       expect(skipBreak(s)).toBe(s)
     }
@@ -190,7 +217,7 @@ describe('reset', () => {
   })
 
   it('returns same reference outside focus phase (click racing the reminder)', () => {
-    for (const phase of ['reminder', 'ready', 'break']) {
+    for (const phase of ['reminder', 'ready', 'break', 'done']) {
       const s = { ...createInitialState(), phase }
       expect(reset(s)).toBe(s)
     }
@@ -247,5 +274,10 @@ describe('applyDurations', () => {
       const s = { ...createInitialState(), phase, remaining: 20 }
       expect(applyDurations(s, 20 * 60, 45).remaining).toBe(45)
     }
+  })
+
+  it('sets remaining to the new focus duration in done', () => {
+    const s = { ...createInitialState(), phase: 'done', remaining: 20 * 60 }
+    expect(applyDurations(s, 30 * 60, 20).remaining).toBe(30 * 60)
   })
 })

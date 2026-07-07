@@ -80,6 +80,11 @@ export default function Widget() {
     progress = remaining / breakDur
     bigText = String(remaining)
     subText = '看向遠方'
+  } else if (phase === 'done') {
+    arcColor = ORANGE
+    progress = 1
+    bigText = fmt(focusDur)
+    subText = '休息完成'
   }
 
   return (
@@ -157,6 +162,9 @@ function PhaseBadge({ phase, isPaused }) {
   } else if (phase === 'break') {
     cls += ' phase-break'
     text = '👁 看向 20 呎(約 6 公尺)外'
+  } else if (phase === 'done') {
+    cls += ' phase-break'
+    text = '✓ 休息完成,準備好就繼續'
   }
   return <div className={cls}>{text}</div>
 }
@@ -188,6 +196,17 @@ function Controls({ phase, isPaused }) {
         onClick={() => api?.skipBreak()}
       >
         Skip 跳過
+      </button>
+    )
+  }
+
+  if (phase === 'done') {
+    return (
+      <button
+        className="btn-ctrl btn-start"
+        onClick={() => api?.startFocus()}
+      >
+        ▶ 繼續工作
       </button>
     )
   }

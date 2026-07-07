@@ -319,6 +319,12 @@ ipcMain.on('break:start', () => {
   state = next; broadcast({ ...state })
 })
 
+ipcMain.on('focus:start', () => {
+  const next = tm.startFocus(state)
+  if (next === state) return
+  state = next; broadcast({ ...state })
+})
+
 ipcMain.on('break:skip', () => {
   const next = tm.skipBreak(state)
   if (next === state) return

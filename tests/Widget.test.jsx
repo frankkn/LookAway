@@ -13,6 +13,7 @@ const mockAPI = {
   resumeTimer: vi.fn(),
   resetTimer: vi.fn(),
   startBreak: vi.fn(),
+  startFocus: vi.fn(),
   skipBreak: vi.fn(),
   minimizeWindow: vi.fn(),
   closeWindow: vi.fn(),
@@ -63,6 +64,10 @@ const breakPhase = {
   phase: 'break', remaining: 20, isPaused: false,
   stats: { breaksToday: 1, focusTime: 300 },
 }
+const done = {
+  phase: 'done', remaining: 20 * 60, isPaused: false,
+  stats: { breaksToday: 1, focusTime: 1200 },
+}
 
 // ── display tests ────────────────────────────────────────────────────────────
 describe('Widget display', () => {
@@ -92,6 +97,13 @@ describe('Widget display', () => {
     push(breakPhase)
     expect(screen.getByText('20')).toBeInTheDocument()
     expect(screen.getByText('看向遠方')).toBeInTheDocument()
+  })
+
+  it('shows upcoming focus time and 休息完成 in done phase', () => {
+    const { push } = renderWidget()
+    push(done)
+    expect(screen.getByText('20:00')).toBeInTheDocument()
+    expect(screen.getByText('休息完成')).toBeInTheDocument()
   })
 })
 
@@ -171,5 +183,12 @@ describe('Widget controls', () => {
     push(breakPhase)
     await userEvent.click(screen.getByText('Skip 跳過'))
     expect(mockAPI.skipBreak).toHaveBeenCalledOnce()
+  })
+
+  it('shows "▶ 繼續工作" button in done phase and calls startFocus on click', async () => {
+    const { push } = renderWidget()
+    push(done)
+    await userEvent.click(screen.getByText('▶ 繼續工作'))
+    expect(mockAPI.startFocus).toHaveBeenCalledOnce()
   })
 })

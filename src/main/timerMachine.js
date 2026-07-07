@@ -33,8 +33,10 @@ function tick(state) {
       next.phase = 'reminder'
       next.remaining = state.breakDuration ?? BREAK_DURATION
     } else {
+      // Break finished: freeze in 'done' until the user clicks 繼續工作 —
+      // they may still be looking away and shouldn't lose focus time silently.
       next.stats.breaksToday++
-      next.phase = 'focus'
+      next.phase = 'done'
       next.remaining = state.focusDuration ?? FOCUS_DURATION
     }
   }
@@ -61,6 +63,13 @@ function startBreak(state, readyAt, now) {
 
 // Returns same reference when phase is not 'break' (e.g. a double-click on
 // Skip whose second click lands after the phase already flipped to focus).
+// 'done' is frozen; the user clicks 繼續工作 to start the next focus round.
+// Returns same reference outside 'done'.
+function startFocus(state) {
+  if (state.phase !== 'done') return state
+  return { ...state, phase: 'focus', remaining: state.focusDuration ?? FOCUS_DURATION }
+}
+
 function skipBreak(state) {
   if (state.phase !== 'break') return state
   return {
@@ -112,6 +121,7 @@ function applyDurations(state, focusDuration, breakDuration) {
   const next = { ...state, focusDuration, breakDuration }
   if (state.phase === 'focus') next.remaining = Math.min(state.remaining, focusDuration)
   else if (state.phase === 'break') next.remaining = Math.min(state.remaining, breakDuration)
+  else if (state.phase === 'done') next.remaining = focusDuration // holds the upcoming focus length
   else next.remaining = breakDuration // reminder/ready hold the upcoming break length
   return next
 }
@@ -126,6 +136,7 @@ module.exports = {
   advance,
   acknowledge,
   startBreak,
+  startFocus,
   skipBreak,
   pause,
   resume,

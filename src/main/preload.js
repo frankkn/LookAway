@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resetTimer:   () => ipcRenderer.send('timer:reset'),
   acknowledgeBreak: () => ipcRenderer.send('break:acknowledge'),
   startBreak:   () => ipcRenderer.send('break:start'),
+  startFocus:   () => ipcRenderer.send('focus:start'),
   skipBreak:    () => ipcRenderer.send('break:skip'),
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   closeWindow:  () => ipcRenderer.send('window:close'),
