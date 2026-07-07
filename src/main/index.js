@@ -41,9 +41,14 @@ function broadcast(data) {
   })
 }
 
+let lastTick = 0
+
 function tick() {
+  const { steps, lastTick: next } = tm.advance(lastTick, Date.now())
+  lastTick = next
+  if (steps === 0) return
   const prev = state
-  state = tm.tick(state)
+  for (let i = 0; i < steps; i++) state = tm.tick(state)
   if (prev.phase === 'focus' && state.phase === 'reminder') showReminder()
   broadcast({ ...state })
 }
@@ -397,6 +402,7 @@ app.whenReady().then(() => {
   createWidgetWindow()
   createReminderWindow()
   createTray()
+  lastTick = Date.now()
   timerInterval = setInterval(tick, 1000)
   updater.initAutoUpdate() // silent check on startup (packaged builds only)
 })

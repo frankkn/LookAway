@@ -1,6 +1,7 @@
 const FOCUS_DURATION = 20 * 60
 const BREAK_DURATION = 20
 const START_GUARD_MS = 400
+const MAX_TICK_CATCHUP = 5 // s; larger gaps (sleep/hibernate) count as paused time
 
 function createInitialState(focusDuration = FOCUS_DURATION, breakDuration = BREAK_DURATION) {
   return {
@@ -91,6 +92,20 @@ function reset(state) {
   }
 }
 
+// Wall-clock pacing for the tick loop. setInterval drifts (throttling, load),
+// so the caller tracks lastTick and asks how many whole seconds have really
+// elapsed. Returns { steps, lastTick }: lastTick advances past every whole
+// second (keeping the sub-second remainder), while steps is capped so a
+// suspend/resume gap doesn't fast-forward the countdown on wake.
+function advance(lastTick, now) {
+  const whole = Math.floor((now - lastTick) / 1000)
+  if (whole <= 0) return { steps: 0, lastTick }
+  return {
+    steps: Math.min(whole, MAX_TICK_CATCHUP),
+    lastTick: lastTick + whole * 1000,
+  }
+}
+
 // Called when the user saves new durations in settings. Clamps the current
 // countdown so shortening a duration takes effect this cycle, not the next.
 function applyDurations(state, focusDuration, breakDuration) {
@@ -105,8 +120,10 @@ module.exports = {
   FOCUS_DURATION,
   BREAK_DURATION,
   START_GUARD_MS,
+  MAX_TICK_CATCHUP,
   createInitialState,
   tick,
+  advance,
   acknowledge,
   startBreak,
   skipBreak,

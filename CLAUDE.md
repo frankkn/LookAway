@@ -132,6 +132,7 @@ State 形狀:`{ phase, remaining, isPaused, stats: { breaksToday, focusTime } }`
 | `FOCUS_DURATION` | `20 * 60` 秒 | `src/main/index.js` |
 | `BREAK_DURATION` | `20` 秒 | `src/main/index.js` |
 | `START_GUARD_MS` | `400` ms | `src/main/index.js` |
+| `MAX_TICK_CATCHUP` | `5` 秒 | `src/main/timerMachine.js`(tick 用 wall-clock 差值計算,單次最多補 5 秒;睡眠/休眠的間隙視同暫停,不會醒來狂補) |
 
 > 測試時常把 `FOCUS_DURATION` 暫時改小(如 `4`)來快速觸發休息流程,**記得改回來再 commit**。
 

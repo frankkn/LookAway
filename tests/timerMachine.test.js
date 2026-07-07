@@ -12,6 +12,8 @@ import {
   resume,
   reset,
   applyDurations,
+  advance,
+  MAX_TICK_CATCHUP,
 } from '../src/main/timerMachine.js'
 
 describe('createInitialState', () => {
@@ -192,6 +194,32 @@ describe('reset', () => {
       const s = { ...createInitialState(), phase }
       expect(reset(s)).toBe(s)
     }
+  })
+})
+
+describe('advance', () => {
+  it('one whole second elapsed → one step', () => {
+    expect(advance(1000, 2000)).toEqual({ steps: 1, lastTick: 2000 })
+  })
+
+  it('sub-second elapsed → no step, lastTick unchanged (remainder kept)', () => {
+    expect(advance(1000, 1999)).toEqual({ steps: 0, lastTick: 1000 })
+  })
+
+  it('keeps the sub-second remainder when stepping', () => {
+    // 2.5s elapsed → 2 steps, 0.5s carried over to the next call
+    expect(advance(1000, 3500)).toEqual({ steps: 2, lastTick: 3000 })
+  })
+
+  it('catches up short drift in full', () => {
+    expect(advance(1000, 1000 + 3000).steps).toBe(3)
+  })
+
+  it('caps a sleep gap instead of fast-forwarding, and skips past it', () => {
+    const hour = 3600 * 1000
+    const r = advance(1000, 1000 + hour)
+    expect(r.steps).toBe(MAX_TICK_CATCHUP)
+    expect(r.lastTick).toBe(1000 + hour) // slept time is dropped, not queued
   })
 })
 
