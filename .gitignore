@@ -1,6 +1,7 @@
 node_modules/
 dist/
 release/
+build/icon-cutout-preview.png
 .DS_Store
 *.log
 .claude/
