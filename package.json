@@ -1,6 +1,6 @@
 {
   "name": "look-away",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "20-20-20 eye strain reminder widget",
   "author": "Frank Yang",
   "main": "src/main/index.js",
