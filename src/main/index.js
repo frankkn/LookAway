@@ -16,6 +16,19 @@ let reminderWin = null
 let settingsWin = null
 let tray = null
 let readyAt = 0
+let reminderShownAt = 0
+
+// Single instance: launching the exe again just re-shows the existing widget
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+}
+app.on('second-instance', () => {
+  if (widgetWin && !widgetWin.isDestroyed()) {
+    widgetWin.show()
+    widgetWin.setAlwaysOnTop(true, 'floating')
+    widgetWin.focus()
+  }
+})
 
 function rendererUrl(page) {
   if (isDev) return `http://localhost:5173/${page}.html`
@@ -44,9 +57,28 @@ function applyFontSize(win, px) {
   ).catch(() => {})
 }
 
-function repositionWidget(w, h) {
-  const { workAreaSize } = screen.getPrimaryDisplay()
-  widgetWin.setPosition(workAreaSize.width - w - 20, workAreaSize.height - h - 20)
+function defaultWidgetPos(w, h) {
+  const { workArea } = screen.getPrimaryDisplay()
+  return [workArea.x + workArea.width - w - 20, workArea.y + workArea.height - h - 20]
+}
+
+// Keep (x, y) inside the work area of whichever display the window is on.
+function clampToDisplay(x, y, w, h) {
+  const { workArea } = screen.getDisplayMatching({ x, y, width: w, height: h })
+  return [
+    Math.min(Math.max(x, workArea.x), workArea.x + workArea.width - w),
+    Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - h),
+  ]
+}
+
+// Resize keeping the bottom-right corner anchored, so the widget neither
+// drifts out of its corner nor loses a position the user dragged it to.
+function resizeWidget(w, h) {
+  if (!widgetWin || widgetWin.isDestroyed()) return
+  const b = widgetWin.getBounds()
+  resizeWindow(widgetWin, w, h)
+  const [x, y] = clampToDisplay(b.x + b.width - w, b.y + b.height - h, w, h)
+  widgetWin.setPosition(x, y)
 }
 
 // Actual widget window size = base size × zoom. Content fills it via the
@@ -69,19 +101,14 @@ function resizeWindow(win, w, h) {
 function applySettings(s) {
   if (widgetWin && !widgetWin.isDestroyed()) {
     const [w, h] = widgetSize(s)
-    resizeWindow(widgetWin, w, h)
-    repositionWidget(w, h)
+    resizeWidget(w, h)
   }
   if (reminderWin && !reminderWin.isDestroyed()) {
     resizeWindow(reminderWin, s.reminderWidth, s.reminderHeight)
     applyFontSize(reminderWin, s.reminderFontSize)
   }
-  // Update timer durations in state
-  state = {
-    ...state,
-    focusDuration: s.focusDuration,
-    breakDuration: s.breakDuration,
-  }
+  state = tm.applyDurations(state, s.focusDuration, s.breakDuration)
+  broadcast({ ...state })
 }
 
 // ── windows ──────────────────────────────────────────────────────────────────
@@ -98,6 +125,7 @@ function centerReminder() {
 
 function showReminder() {
   if (!reminderWin || reminderWin.isDestroyed()) return
+  reminderShownAt = Date.now()
   reminderWin.webContents.send('reminder:preview-mode', false) // real break, no close X
   centerReminder()
   reminderWin.show()
@@ -113,13 +141,15 @@ function hideReminder() {
 }
 
 function createWidgetWindow() {
-  const { workAreaSize } = screen.getPrimaryDisplay()
   const [w, h] = widgetSize(settings)
+  const hasSavedPos = Number.isFinite(settings.widgetX) && Number.isFinite(settings.widgetY)
+  const [x, y] = hasSavedPos
+    ? clampToDisplay(settings.widgetX, settings.widgetY, w, h) // clamp: monitor may be gone
+    : defaultWidgetPos(w, h)
 
   widgetWin = new BrowserWindow({
     width: w, height: h,
-    x: workAreaSize.width - w - 20,
-    y: workAreaSize.height - h - 20,
+    x, y,
     frame: false, transparent: true, alwaysOnTop: true,
     resizable: false, skipTaskbar: true, hasShadow: false,
     webPreferences: {
@@ -132,6 +162,18 @@ function createWidgetWindow() {
   widgetWin.loadURL(rendererUrl('main'))
   widgetWin.webContents.on('did-finish-load', () => {
     broadcast({ ...state })
+  })
+
+  // Remember where the user drags the widget (debounced; 'moved' also fires
+  // on our own setPosition calls, which is fine — it saves the same position)
+  let savePosTimer = null
+  widgetWin.on('moved', () => {
+    clearTimeout(savePosTimer)
+    savePosTimer = setTimeout(() => {
+      if (!widgetWin || widgetWin.isDestroyed()) return
+      const [px, py] = widgetWin.getPosition()
+      settings = cfg.save({ ...settings, widgetX: px, widgetY: py })
+    }, 500)
   })
 
   if (isDev) widgetWin.webContents.openDevTools({ mode: 'detach' })
@@ -254,10 +296,14 @@ function createTray() {
 
 ipcMain.on('timer:pause',   () => { state = tm.pause(state);   broadcast({ ...state }) })
 ipcMain.on('timer:resume',  () => { state = tm.resume(state);  broadcast({ ...state }) })
-ipcMain.on('timer:reset',   () => { state = tm.reset(state); hideReminder(); broadcast({ ...state }) })
+ipcMain.on('timer:reset', () => {
+  const next = tm.reset(state)
+  if (next === state) return
+  state = next; broadcast({ ...state })
+})
 
 ipcMain.on('break:acknowledge', () => {
-  const next = tm.acknowledge(state)
+  const next = tm.acknowledge(state, reminderShownAt, Date.now())
   if (next === state) return
   state = next; readyAt = Date.now(); hideReminder(); broadcast({ ...state })
 })
@@ -269,7 +315,9 @@ ipcMain.on('break:start', () => {
 })
 
 ipcMain.on('break:skip', () => {
-  state = tm.skipBreak(state); hideReminder(); broadcast({ ...state })
+  const next = tm.skipBreak(state)
+  if (next === state) return
+  state = next; broadcast({ ...state })
 })
 
 let hintShown = false
@@ -297,20 +345,16 @@ ipcMain.on('settings:open', () => createSettingsWindow())
 
 // ── live preview (does not persist) ──
 ipcMain.on('settings:preview-widget', (_, s) => {
-  if (!widgetWin || widgetWin.isDestroyed()) return
   if (s.widgetWidth && s.widgetHeight) {
     const [w, h] = widgetSize(s)
-    resizeWindow(widgetWin, w, h)
-    repositionWidget(w, h)
+    resizeWidget(w, h)
   }
 })
 
 ipcMain.on('widget:preview-stop', () => {
   // Revert the widget to the saved size
-  if (!widgetWin || widgetWin.isDestroyed()) return
   const [w, h] = widgetSize(settings)
-  resizeWindow(widgetWin, w, h)
-  repositionWidget(w, h)
+  resizeWidget(w, h)
 })
 
 ipcMain.on('reminder:preview', (_, s) => {
@@ -355,4 +399,11 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => { /* keep running in tray */ })
-app.on('before-quit', () => clearInterval(timerInterval))
+app.on('before-quit', () => {
+  clearInterval(timerInterval)
+  // Flush the widget position in case a drag happened within the save debounce
+  if (widgetWin && !widgetWin.isDestroyed()) {
+    const [px, py] = widgetWin.getPosition()
+    settings = cfg.save({ ...settings, widgetX: px, widgetY: py })
+  }
+})

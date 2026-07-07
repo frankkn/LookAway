@@ -11,6 +11,7 @@ import {
   pause,
   resume,
   reset,
+  applyDurations,
 } from '../src/main/timerMachine.js'
 
 describe('createInitialState', () => {
@@ -94,14 +95,26 @@ describe('tick', () => {
 })
 
 describe('acknowledge', () => {
-  it('transitions reminder → ready', () => {
+  const shownAt = 1000
+
+  it('transitions reminder → ready after the guard window', () => {
+    const s = { ...createInitialState(), phase: 'reminder' }
+    expect(acknowledge(s, shownAt, shownAt + START_GUARD_MS + 1).phase).toBe('ready')
+  })
+
+  it('returns same reference within the guard window (Enter leaking into the reminder)', () => {
+    const s = { ...createInitialState(), phase: 'reminder' }
+    expect(acknowledge(s, shownAt, shownAt + START_GUARD_MS - 1)).toBe(s)
+  })
+
+  it('transitions without timestamps (guard defaults open)', () => {
     const s = { ...createInitialState(), phase: 'reminder' }
     expect(acknowledge(s).phase).toBe('ready')
   })
 
   it('returns same reference when not in reminder phase', () => {
     const s = createInitialState() // focus
-    expect(acknowledge(s)).toBe(s)
+    expect(acknowledge(s, shownAt, shownAt + START_GUARD_MS + 1)).toBe(s)
   })
 })
 
@@ -127,18 +140,23 @@ describe('startBreak', () => {
 })
 
 describe('skipBreak', () => {
-  it('always transitions to focus phase', () => {
-    for (const phase of ['focus', 'reminder', 'ready', 'break']) {
-      const s = { ...createInitialState(), phase }
-      const next = skipBreak(s)
-      expect(next.phase).toBe('focus')
-      expect(next.remaining).toBe(FOCUS_DURATION)
-    }
+  it('transitions break → focus with full duration', () => {
+    const s = { ...createInitialState(), phase: 'break', remaining: 10 }
+    const next = skipBreak(s)
+    expect(next.phase).toBe('focus')
+    expect(next.remaining).toBe(FOCUS_DURATION)
   })
 
   it('increments breaksToday', () => {
-    const s = { ...createInitialState(), stats: { breaksToday: 2, focusTime: 100 } }
+    const s = { ...createInitialState(), phase: 'break', stats: { breaksToday: 2, focusTime: 100 } }
     expect(skipBreak(s).stats.breaksToday).toBe(3)
+  })
+
+  it('returns same reference outside break phase (double-click on Skip)', () => {
+    for (const phase of ['focus', 'reminder', 'ready']) {
+      const s = { ...createInitialState(), phase }
+      expect(skipBreak(s)).toBe(s)
+    }
   })
 })
 
@@ -154,8 +172,8 @@ describe('pause / resume', () => {
 })
 
 describe('reset', () => {
-  it('resets to focus phase with full duration', () => {
-    const s = { phase: 'break', remaining: 5, isPaused: true, stats: { breaksToday: 3, focusTime: 500 } }
+  it('restores full duration and unpauses', () => {
+    const s = { ...createInitialState(), remaining: 5, isPaused: true }
     const next = reset(s)
     expect(next.phase).toBe('focus')
     expect(next.remaining).toBe(FOCUS_DURATION)
@@ -167,5 +185,39 @@ describe('reset', () => {
     const next = reset(s)
     expect(next.stats.breaksToday).toBe(3)
     expect(next.stats.focusTime).toBe(500)
+  })
+
+  it('returns same reference outside focus phase (click racing the reminder)', () => {
+    for (const phase of ['reminder', 'ready', 'break']) {
+      const s = { ...createInitialState(), phase }
+      expect(reset(s)).toBe(s)
+    }
+  })
+})
+
+describe('applyDurations', () => {
+  it('updates durations without touching a shorter remaining', () => {
+    const s = { ...createInitialState(), remaining: 100 }
+    const next = applyDurations(s, 30 * 60, 30)
+    expect(next.focusDuration).toBe(30 * 60)
+    expect(next.breakDuration).toBe(30)
+    expect(next.remaining).toBe(100)
+  })
+
+  it('clamps remaining when the focus duration is shortened mid-focus', () => {
+    const s = { ...createInitialState(), remaining: 18 * 60 }
+    expect(applyDurations(s, 5 * 60, 20).remaining).toBe(5 * 60)
+  })
+
+  it('clamps remaining when the break duration is shortened mid-break', () => {
+    const s = { ...createInitialState(), phase: 'break', remaining: 18 }
+    expect(applyDurations(s, 20 * 60, 10).remaining).toBe(10)
+  })
+
+  it('sets remaining to the new break duration in reminder/ready', () => {
+    for (const phase of ['reminder', 'ready']) {
+      const s = { ...createInitialState(), phase, remaining: 20 }
+      expect(applyDurations(s, 20 * 60, 45).remaining).toBe(45)
+    }
   })
 })

@@ -7,6 +7,8 @@ const DEFAULTS = {
   widgetWidth: 280,
   widgetHeight: 360,
   widgetScale: 1,          // zoom multiplier for the whole widget
+  widgetX: null,           // last dragged position; null = default corner
+  widgetY: null,
   reminderWidth: 460,
   reminderHeight: 360,
   reminderFontSize: 16,

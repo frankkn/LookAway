@@ -42,8 +42,12 @@ function tick(state) {
 }
 
 // Returns same reference when phase is not 'reminder'.
-function acknowledge(state) {
+// shownAt/now are timestamps (ms): the reminder steals focus with an
+// auto-focused OK button, so an Enter typed at the wrong moment would dismiss
+// it before the user ever sees it — ignore acknowledge right after it appears.
+function acknowledge(state, shownAt = -Infinity, now = 0) {
   if (state.phase !== 'reminder') return state
+  if (now - shownAt < START_GUARD_MS) return state
   return { ...state, phase: 'ready' }
 }
 
@@ -54,7 +58,10 @@ function startBreak(state, readyAt, now) {
   return { ...state, phase: 'break', remaining: state.breakDuration ?? BREAK_DURATION }
 }
 
+// Returns same reference when phase is not 'break' (e.g. a double-click on
+// Skip whose second click lands after the phase already flipped to focus).
 function skipBreak(state) {
+  if (state.phase !== 'break') return state
   return {
     ...state,
     phase: 'focus',
@@ -71,14 +78,27 @@ function resume(state) {
   return { ...state, isPaused: false }
 }
 
-// Resets timer back to focus; preserves today's stats and durations.
+// Resets the focus countdown; preserves today's stats and durations.
+// No-op outside focus so a click racing the focus→reminder transition
+// cannot silently cancel the break.
 function reset(state) {
+  if (state.phase !== 'focus') return state
   return {
     ...state,
     phase: 'focus',
     remaining: state.focusDuration ?? FOCUS_DURATION,
     isPaused: false,
   }
+}
+
+// Called when the user saves new durations in settings. Clamps the current
+// countdown so shortening a duration takes effect this cycle, not the next.
+function applyDurations(state, focusDuration, breakDuration) {
+  const next = { ...state, focusDuration, breakDuration }
+  if (state.phase === 'focus') next.remaining = Math.min(state.remaining, focusDuration)
+  else if (state.phase === 'break') next.remaining = Math.min(state.remaining, breakDuration)
+  else next.remaining = breakDuration // reminder/ready hold the upcoming break length
+  return next
 }
 
 module.exports = {
@@ -93,4 +113,5 @@ module.exports = {
   pause,
   resume,
   reset,
+  applyDurations,
 }

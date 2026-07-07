@@ -66,8 +66,12 @@ reminder ── 使用者按「好,我知道了」──▶ ready
    └────────────────────────────────────┴──▶ 回到 focus
 ```
 - `tick()` **只在 `focus` / `break` 遞減**;`reminder` / `ready` 是凍結等待狀態。
-- `reminder` → `ready` 之間有 **400ms 守門** (`START_GUARD_MS`):防止 reminder 上的 Enter
-  按鍵洩漏到剛取得焦點的 widget、連鎖跳過 `ready`。滑鼠操作不受影響。
+- **400ms 守門** (`START_GUARD_MS`) 用在兩處按鍵洩漏:
+  1. reminder 剛彈出(搶焦點 + OK 鈕 autoFocus)→ 忽略 `acknowledge`,防止打字中的 Enter 直接按掉提醒;
+  2. `ready` 剛開始 → 忽略 `startBreak`,防止 reminder 上的 Enter 洩漏到剛取得焦點的 widget、連鎖跳過 `ready`。
+  滑鼠操作不受影響。
+- `skipBreak` / `reset` 有 phase 守衛(只在 `break` / `focus` 生效),連點或 race 時回傳原 state(no-op)。
+- widget 位置:使用者拖曳後存進 `settings.json`(`widgetX/widgetY`),重開還原;調整大小時以右下角為錨點,不會吸回預設角落。
 
 ### 視窗
 | 視窗 | 檔案 | 說明 |
