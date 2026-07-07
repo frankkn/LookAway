@@ -45,6 +45,10 @@ npm run build:renderer   # 只 build 前端(驗證編譯用,很快)
    dev 模式一切正常、打包後才會炸(`Cannot find module`),而且炸在 require 階段,連自動更新都救不了。
    **發版前務必實測打包版**:`npm run dist` → 跑 `release/win-unpacked/Look Away.exe` 確認能啟動。
    (v1.1.0 曾因 `src/shared/limits.json` 沒進白名單而發出壞版,幸好零下載即時撤回。)
+   實測打包版時注意兩個坑:
+   - **先清 `ELECTRON_RUN_AS_NODE`**(見第 1 點),否則 unpacked exe 秒退,看起來像 app 壞掉。
+   - **驗證存活要檢查 process 的 `Path` 指向 win-unpacked**——使用者安裝版可能同時在跑,
+     只數 process 數量會假陽性;而且兩者共用 single-instance lock,安裝版在跑時測試版會直接退出。
 
 5. **PowerShell 提交含中文的 commit message 會壞掉**
    here-string (`@'...'@`) 遇到中文或內嵌引號常被 PowerShell 切斷。
