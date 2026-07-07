@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react'
-
-const LIMITS = {
-  widgetWidth:      { min: 200, max: 1200 },
-  widgetHeight:     { min: 200, max: 1200 },
-  widgetScalePct:   { min: 50,  max: 300  },
-  reminderWidth:    { min: 300, max: 1600 },
-  reminderHeight:   { min: 200, max: 1200 },
-  reminderFontSize: { min: 8,   max: 72   },
-}
+// Single source of truth for value ranges, shared with the main process
+// (src/main/settings.js), which clamps everything again on load/save.
+import LIMITS from '../../shared/limits.json'
 
 function NumInput({ value, onChange, min, max, unit, width }) {
   // Local text state so the user can type freely; clamp only on blur / Enter.

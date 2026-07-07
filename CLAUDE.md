@@ -98,6 +98,8 @@ src/
       ArcProgress.jsx   # 共用 SVG 圓弧進度條(兩邊都用)
     styles/
       widget.css / reminder.css
+  shared/
+    limits.json     # 設定值範圍(min/max),主行程 sanitize 與 Settings UI 共用
 vite.config.mjs       # 多頁 build:main + reminder;base:'./';dev port 5173
 electron-builder.yml  # Windows nsis + portable
 ```
