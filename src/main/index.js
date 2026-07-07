@@ -412,7 +412,14 @@ app.whenReady().then(() => {
   createTray()
   lastTick = Date.now()
   timerInterval = setInterval(tick, 1000)
-  updater.initAutoUpdate() // silent check on startup (packaged builds only)
+  updater.setUI({
+    // Download progress strip at the bottom of the widget
+    status: s => {
+      if (widgetWin && !widgetWin.isDestroyed()) widgetWin.webContents.send('update:status', s)
+    },
+    parent: () => widgetWin,
+  })
+  updater.initAutoUpdate() // silent check on startup + every 4h (packaged builds only)
 })
 
 app.on('window-all-closed', () => { /* keep running in tray */ })

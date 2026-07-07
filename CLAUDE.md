@@ -134,6 +134,8 @@ electron-builder.yml  # Windows nsis + portable
 | `window:minimize` / `window:close` | `minimizeWindow` / `closeWindow` | 隱藏到 tray / 離開 |
 
 **Main → Renderer**: `timer:tick`(廣播完整 state) — 前端用 `onTimerTick(cb)` 訂閱。
+`update:status`(自動更新狀態 `{ state: 'downloading'|'ready'|'none', version, percent, bytesPerSecond }`)
+— widget 用 `onUpdateStatus(cb)` 訂閱,底部顯示下載進度條。更新檢查:啟動時 + 每 4 小時(`updater.js`)。
 **Invoke**: `timer:getState`(`getTimerState()`) — 視窗載入時取初始狀態;`app:version`(`getAppVersion()`) — 取 app 版本號(設定視窗顯示用)。
 
 State 形狀:`{ phase, remaining, isPaused, stats: { breaksToday, focusTime } }`

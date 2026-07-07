@@ -35,6 +35,39 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; /* anchor for the update progress strip */
+}
+
+/* ── Auto-update progress strip (overlays the bottom edge) ── */
+.update-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 24, 0.94);
+  border-top: 1px solid rgba(79, 195, 247, 0.25);
+  color: #7dd6f7;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  z-index: 5;
+}
+
+.update-strip-fill {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  height: 2px;
+  background: #4fc3f7;
+  transition: width 0.4s ease;
+}
+
+.update-strip-ready {
+  color: #a5e3b0;
+  border-top-color: rgba(140, 220, 160, 0.3);
 }
 
 /* ── Header ── */

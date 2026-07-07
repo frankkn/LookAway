@@ -9,6 +9,7 @@ const mockAPI = {
   getTimerState: vi.fn(),
   getSettings: vi.fn(),
   onTimerTick: vi.fn(),
+  onUpdateStatus: vi.fn(),
   pauseTimer: vi.fn(),
   resumeTimer: vi.fn(),
   resetTimer: vi.fn(),
@@ -25,6 +26,7 @@ beforeEach(() => {
   mockAPI.getTimerState.mockResolvedValue(null) // don't override DEFAULT_STATE
   mockAPI.getSettings.mockResolvedValue(null)
   mockAPI.onTimerTick.mockReturnValue(() => {})
+  mockAPI.onUpdateStatus.mockReturnValue(() => {})
   Object.defineProperty(window, 'electronAPI', {
     value: mockAPI,
     writable: true,
@@ -35,14 +37,20 @@ beforeEach(() => {
 // Push a state snapshot into the widget via the onTimerTick callback.
 function renderWidget() {
   let tickCb = null
+  let updateCb = null
   mockAPI.onTimerTick.mockImplementation(cb => {
     tickCb = cb
+    return () => {}
+  })
+  mockAPI.onUpdateStatus.mockImplementation(cb => {
+    updateCb = cb
     return () => {}
   })
   render(<Widget />)
   // After render(), useEffect has flushed (RTL wraps in act), so tickCb is set.
   return {
     push: s => act(() => { tickCb(s) }),
+    pushUpdate: s => act(() => { updateCb(s) }),
   }
 }
 
@@ -206,5 +214,35 @@ describe('Widget controls', () => {
     push(done)
     await userEvent.click(screen.getByText('▶ 繼續工作'))
     expect(mockAPI.startFocus).toHaveBeenCalledOnce()
+  })
+})
+
+// ── update progress strip ────────────────────────────────────────────────────
+describe('Widget update strip', () => {
+  it('is hidden by default', () => {
+    renderWidget()
+    expect(screen.queryByText(/下載中/)).not.toBeInTheDocument()
+  })
+
+  it('shows download progress with version and percent', () => {
+    const { pushUpdate } = renderWidget()
+    pushUpdate({ state: 'downloading', version: '1.3.0', percent: 0 })
+    pushUpdate({ state: 'downloading', percent: 45.4, bytesPerSecond: 3.2 * 1024 * 1024 })
+    expect(screen.getByText(/更新 v1\.3\.0 下載中 45%/)).toBeInTheDocument()
+    expect(screen.getByText(/3\.2 MB\/s/)).toBeInTheDocument()
+  })
+
+  it('shows ready message when the download completes', () => {
+    const { pushUpdate } = renderWidget()
+    pushUpdate({ state: 'downloading', version: '1.3.0', percent: 80 })
+    pushUpdate({ state: 'ready', version: '1.3.0' })
+    expect(screen.getByText(/v1\.3\.0 已就緒/)).toBeInTheDocument()
+  })
+
+  it('disappears when the status returns to none', () => {
+    const { pushUpdate } = renderWidget()
+    pushUpdate({ state: 'downloading', version: '1.3.0', percent: 10 })
+    pushUpdate({ state: 'none' })
+    expect(screen.queryByText(/下載中/)).not.toBeInTheDocument()
   })
 })

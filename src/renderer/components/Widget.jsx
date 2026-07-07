@@ -29,10 +29,19 @@ const BLUE = '#4fc3f7'
 
 export default function Widget() {
   const [ts, setTs] = useState(DEFAULT_STATE)
+  const [update, setUpdate] = useState(null) // { state, version, percent, bytesPerSecond }
 
   useEffect(() => {
     window.electronAPI?.getTimerState().then(s => s && setTs(s))
     const cleanup = window.electronAPI?.onTimerTick(setTs)
+    return () => typeof cleanup === 'function' && cleanup()
+  }, [])
+
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onUpdateStatus?.(s => {
+      // merge partial events (progress has no version) into the last status
+      setUpdate(prev => (s.state === 'none' ? null : { ...prev, ...s }))
+    })
     return () => typeof cleanup === 'function' && cleanup()
   }, [])
 
@@ -149,8 +158,35 @@ export default function Widget() {
       <div className="controls no-drag">
         <Controls phase={phase} isPaused={isPaused} />
       </div>
+
+      <UpdateStrip update={update} />
     </div>
   )
+}
+
+// Slim overlay along the widget's bottom edge while an update downloads
+function UpdateStrip({ update }) {
+  if (!update) return null
+  if (update.state === 'downloading') {
+    const pct = Math.round(update.percent || 0)
+    const speed = update.bytesPerSecond
+      ? ` · ${(update.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`
+      : ''
+    return (
+      <div className="update-strip">
+        <div className="update-strip-fill" style={{ width: `${pct}%` }} />
+        <span>⬇ 更新{update.version ? ` v${update.version}` : ''} 下載中 {pct}%{speed}</span>
+      </div>
+    )
+  }
+  if (update.state === 'ready') {
+    return (
+      <div className="update-strip update-strip-ready">
+        <span>✓ 更新{update.version ? ` v${update.version}` : ''} 已就緒,重啟後套用</span>
+      </div>
+    )
+  }
+  return null
 }
 
 function PhaseBadge({ phase, isPaused }) {

@@ -20,6 +20,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('timer:tick', handler)
   },
 
+  // Auto-update download state → widget progress strip
+  onUpdateStatus: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('update:status', handler)
+    return () => ipcRenderer.removeListener('update:status', handler)
+  },
+
   openSettings:  () => ipcRenderer.send('settings:open'),
   getSettings:   () => ipcRenderer.invoke('settings:get'),
   saveSettings:  (data) => ipcRenderer.invoke('settings:save', data),
