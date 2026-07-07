@@ -25,6 +25,7 @@ publish:
 
 files:
   - src/main/**
+  - src/shared/**
   - dist/renderer/**
   - package.json
   # Production dependencies (electron-updater) — dev deps are pruned automatically

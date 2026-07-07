@@ -41,7 +41,12 @@ npm run build:renderer   # 只 build 前端(驗證編譯用,很快)
    node node_modules/electron/install.js
    ```
 
-4. **PowerShell 提交含中文的 commit message 會壞掉**
+4. **新增 `src/` 底下的目錄時,必須同步更新 `electron-builder.yml` 的 `files` 白名單**
+   dev 模式一切正常、打包後才會炸(`Cannot find module`),而且炸在 require 階段,連自動更新都救不了。
+   **發版前務必實測打包版**:`npm run dist` → 跑 `release/win-unpacked/Look Away.exe` 確認能啟動。
+   (v1.1.0 曾因 `src/shared/limits.json` 沒進白名單而發出壞版,幸好零下載即時撤回。)
+
+5. **PowerShell 提交含中文的 commit message 會壞掉**
    here-string (`@'...'@`) 遇到中文或內嵌引號常被 PowerShell 切斷。
    **一律改用檔案**:把訊息寫進 `.txt`(UTF-8)再 `git commit -F msg.txt`。
 
