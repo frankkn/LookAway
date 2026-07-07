@@ -18,37 +18,45 @@ import {
 } from '../src/main/timerMachine.js'
 
 describe('createInitialState', () => {
-  it('starts in focus phase with full duration', () => {
+  it('starts frozen in idle with full duration (launching ≠ focusing)', () => {
     const s = createInitialState()
-    expect(s.phase).toBe('focus')
+    expect(s.phase).toBe('idle')
     expect(s.remaining).toBe(FOCUS_DURATION)
     expect(s.isPaused).toBe(false)
     expect(s.stats).toEqual({ breaksToday: 0, focusTime: 0 })
   })
 })
 
+// Most transitions start from a running focus round.
+const focusState = () => ({ ...createInitialState(), phase: 'focus' })
+
 describe('tick', () => {
   it('decrements remaining in focus phase', () => {
-    const s = createInitialState()
+    const s = focusState()
     const next = tick(s)
     expect(next.remaining).toBe(FOCUS_DURATION - 1)
     expect(next.phase).toBe('focus')
   })
 
   it('increments focusTime each tick in focus phase', () => {
-    const s = createInitialState()
+    const s = focusState()
     const next = tick(s)
     expect(next.stats.focusTime).toBe(1)
   })
 
   it('does not mutate the original state object', () => {
-    const s = createInitialState()
+    const s = focusState()
     tick(s)
     expect(s.remaining).toBe(FOCUS_DURATION)
   })
 
   it('returns same reference when paused (no-op)', () => {
-    const s = { ...createInitialState(), isPaused: true }
+    const s = { ...focusState(), isPaused: true }
+    expect(tick(s)).toBe(s)
+  })
+
+  it('returns same reference in idle phase (frozen)', () => {
+    const s = createInitialState()
     expect(tick(s)).toBe(s)
   })
 
@@ -68,14 +76,14 @@ describe('tick', () => {
   })
 
   it('transitions focus → reminder when remaining reaches 0', () => {
-    const s = { ...createInitialState(), remaining: 1 }
+    const s = { ...focusState(), remaining: 1 }
     const next = tick(s)
     expect(next.phase).toBe('reminder')
     expect(next.remaining).toBe(BREAK_DURATION)
   })
 
   it('still increments focusTime on the final focus tick', () => {
-    const s = { ...createInitialState(), remaining: 1, stats: { breaksToday: 0, focusTime: 10 } }
+    const s = { ...focusState(), remaining: 1, stats: { breaksToday: 0, focusTime: 10 } }
     const next = tick(s)
     expect(next.stats.focusTime).toBe(11)
   })
@@ -155,12 +163,17 @@ describe('startFocus', () => {
     expect(next.remaining).toBe(FOCUS_DURATION)
   })
 
+  it('transitions idle → focus (app start / after reset)', () => {
+    const s = createInitialState() // idle
+    expect(startFocus(s).phase).toBe('focus')
+  })
+
   it('does not touch stats', () => {
     const s = { ...createInitialState(), phase: 'done', stats: { breaksToday: 2, focusTime: 100 } }
     expect(startFocus(s).stats).toEqual({ breaksToday: 2, focusTime: 100 })
   })
 
-  it('returns same reference outside done phase', () => {
+  it('returns same reference outside idle/done phases', () => {
     for (const phase of ['focus', 'reminder', 'ready', 'break']) {
       const s = { ...createInitialState(), phase }
       expect(startFocus(s)).toBe(s)
@@ -182,7 +195,7 @@ describe('skipBreak', () => {
   })
 
   it('returns same reference outside break phase (double-click on Skip)', () => {
-    for (const phase of ['focus', 'reminder', 'ready', 'done']) {
+    for (const phase of ['idle', 'focus', 'reminder', 'ready', 'done']) {
       const s = { ...createInitialState(), phase }
       expect(skipBreak(s)).toBe(s)
     }
@@ -201,23 +214,23 @@ describe('pause / resume', () => {
 })
 
 describe('reset', () => {
-  it('restores full duration and unpauses', () => {
-    const s = { ...createInitialState(), remaining: 5, isPaused: true }
+  it('abandons the round: back to frozen idle with full duration, unpaused', () => {
+    const s = { ...focusState(), remaining: 5, isPaused: true }
     const next = reset(s)
-    expect(next.phase).toBe('focus')
+    expect(next.phase).toBe('idle')
     expect(next.remaining).toBe(FOCUS_DURATION)
     expect(next.isPaused).toBe(false)
   })
 
   it('preserves today\'s stats on reset', () => {
-    const s = { ...createInitialState(), stats: { breaksToday: 3, focusTime: 500 } }
+    const s = { ...focusState(), stats: { breaksToday: 3, focusTime: 500 } }
     const next = reset(s)
     expect(next.stats.breaksToday).toBe(3)
     expect(next.stats.focusTime).toBe(500)
   })
 
   it('returns same reference outside focus phase (click racing the reminder)', () => {
-    for (const phase of ['reminder', 'ready', 'break', 'done']) {
+    for (const phase of ['idle', 'reminder', 'ready', 'break', 'done']) {
       const s = { ...createInitialState(), phase }
       expect(reset(s)).toBe(s)
     }
@@ -252,7 +265,7 @@ describe('advance', () => {
 
 describe('applyDurations', () => {
   it('updates durations without touching a shorter remaining', () => {
-    const s = { ...createInitialState(), remaining: 100 }
+    const s = { ...focusState(), remaining: 100 }
     const next = applyDurations(s, 30 * 60, 30)
     expect(next.focusDuration).toBe(30 * 60)
     expect(next.breakDuration).toBe(30)
@@ -260,7 +273,7 @@ describe('applyDurations', () => {
   })
 
   it('clamps remaining when the focus duration is shortened mid-focus', () => {
-    const s = { ...createInitialState(), remaining: 18 * 60 }
+    const s = { ...focusState(), remaining: 18 * 60 }
     expect(applyDurations(s, 5 * 60, 20).remaining).toBe(5 * 60)
   })
 
@@ -276,8 +289,10 @@ describe('applyDurations', () => {
     }
   })
 
-  it('sets remaining to the new focus duration in done', () => {
-    const s = { ...createInitialState(), phase: 'done', remaining: 20 * 60 }
-    expect(applyDurations(s, 30 * 60, 20).remaining).toBe(30 * 60)
+  it('sets remaining to the new focus duration in idle/done', () => {
+    for (const phase of ['idle', 'done']) {
+      const s = { ...createInitialState(), phase, remaining: 20 * 60 }
+      expect(applyDurations(s, 30 * 60, 20).remaining).toBe(30 * 60)
+    }
   })
 })

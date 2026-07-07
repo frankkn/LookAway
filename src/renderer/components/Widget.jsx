@@ -18,7 +18,7 @@ function fmtFocus(secs) {
 }
 
 const DEFAULT_STATE = {
-  phase: 'focus',
+  phase: 'idle',
   remaining: FOCUS_DURATION,
   isPaused: false,
   stats: { breaksToday: 0, focusTime: 0 },
@@ -60,7 +60,12 @@ export default function Widget() {
   let bigText = ''
   let subText = ''
 
-  if (phase === 'focus') {
+  if (phase === 'idle') {
+    arcColor = ORANGE
+    progress = 1
+    bigText = fmt(focusDur)
+    subText = '準備開始'
+  } else if (phase === 'focus') {
     arcColor = ORANGE
     progress = remaining / focusDur
     bigText = fmt(remaining)
@@ -151,7 +156,9 @@ export default function Widget() {
 function PhaseBadge({ phase, isPaused }) {
   let cls = 'phase-badge'
   let text = ''
-  if (phase === 'focus') {
+  if (phase === 'idle') {
+    text = '準備好就開始吧'
+  } else if (phase === 'focus') {
     text = isPaused ? '⏸ Paused' : '● Focusing'
   } else if (phase === 'reminder') {
     cls += ' phase-break'
@@ -200,13 +207,13 @@ function Controls({ phase, isPaused }) {
     )
   }
 
-  if (phase === 'done') {
+  if (phase === 'idle' || phase === 'done') {
     return (
       <button
         className="btn-ctrl btn-start"
         onClick={() => api?.startFocus()}
       >
-        ▶ 繼續工作
+        {phase === 'idle' ? '▶ 開始工作' : '▶ 繼續工作'}
       </button>
     )
   }

@@ -71,9 +71,16 @@ const done = {
 
 // ── display tests ────────────────────────────────────────────────────────────
 describe('Widget display', () => {
-  it('shows M:SS countdown in focus phase', () => {
+  it('shows upcoming focus time and 準備開始 in idle phase', () => {
     renderWidget()
-    // DEFAULT_STATE is focus/20:00, no push needed
+    // DEFAULT_STATE is idle/20:00, no push needed
+    expect(screen.getByText('20:00')).toBeInTheDocument()
+    expect(screen.getByText('準備開始')).toBeInTheDocument()
+  })
+
+  it('shows M:SS countdown in focus phase', () => {
+    const { push } = renderWidget()
+    push(focus)
     expect(screen.getByText('20:00')).toBeInTheDocument()
     expect(screen.getByText('until break')).toBeInTheDocument()
   })
@@ -130,8 +137,15 @@ describe('Widget stats', () => {
 
 // ── controls ─────────────────────────────────────────────────────────────────
 describe('Widget controls', () => {
+  it('shows "▶ 開始工作" button in idle phase and calls startFocus on click', async () => {
+    renderWidget() // DEFAULT_STATE is idle
+    await userEvent.click(screen.getByText('▶ 開始工作'))
+    expect(mockAPI.startFocus).toHaveBeenCalledOnce()
+  })
+
   it('shows Pause button in focus phase', () => {
-    renderWidget()
+    const { push } = renderWidget()
+    push(focus)
     expect(screen.getByText('⏸ Pause')).toBeInTheDocument()
   })
 
@@ -142,7 +156,8 @@ describe('Widget controls', () => {
   })
 
   it('shows Reset button in focus phase', () => {
-    renderWidget()
+    const { push } = renderWidget()
+    push(focus)
     expect(screen.getByText('↺ Reset')).toBeInTheDocument()
   })
 
@@ -159,7 +174,8 @@ describe('Widget controls', () => {
   })
 
   it('calls pauseTimer when Pause is clicked', async () => {
-    renderWidget()
+    const { push } = renderWidget()
+    push(focus)
     await userEvent.click(screen.getByText('⏸ Pause'))
     expect(mockAPI.pauseTimer).toHaveBeenCalledOnce()
   })

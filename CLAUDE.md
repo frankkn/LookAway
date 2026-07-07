@@ -57,8 +57,11 @@ npm run build:renderer   # 只 build 前端(驗證編譯用,很快)
 **計時邏輯完全在主行程**,UI 只負責顯示。主行程每秒 `tick()`,再透過 IPC 廣播完整狀態給所有視窗。
 關掉/重開任何視窗都不影響計時。
 
-### 狀態機(五階段)
+### 狀態機(六階段)
 ```
+idle (app 啟動 / Reset 後,凍結,widget 顯示「▶ 開始工作」)
+   │ 使用者按下(startFocus)
+   ▼
 focus (倒數 20 分)
    │ 時間到 → 顯示 reminder 小視窗(搶焦點)
    ▼
@@ -73,9 +76,10 @@ reminder ── 使用者按「好,我知道了」──▶ ready
                                         ▼
                                       回到 focus
 ```
-- `tick()` **只在 `focus` / `break` 遞減**;`reminder` / `ready` / `done` 是凍結等待狀態。
-- 休息倒數結束**不會**自動回 focus:凍結在 `done`,等使用者按「▶ 繼續工作」(`startFocus`)。
-  Skip 是使用者主動按的,所以仍直接回 focus。
+- `tick()` **只在 `focus` / `break` 遞減**;`idle` / `reminder` / `ready` / `done` 是凍結等待狀態。
+- **app 啟動不會自動開始倒數**:起始在 `idle`,等使用者按「▶ 開始工作」;`Reset` 也回到 `idle`。
+- 休息倒數結束**不會**自動回 focus:凍結在 `done`,等使用者按「▶ 繼續工作」。
+  `startFocus` 同時接受 `idle` / `done`。Skip 是使用者主動按的,所以仍直接回 focus。
 - **400ms 守門** (`START_GUARD_MS`) 用在兩處按鍵洩漏:
   1. reminder 剛彈出(搶焦點 + OK 鈕 autoFocus)→ 忽略 `acknowledge`,防止打字中的 Enter 直接按掉提醒;
   2. `ready` 剛開始 → 忽略 `startBreak`,防止 reminder 上的 Enter 洩漏到剛取得焦點的 widget、連鎖跳過 `ready`。

@@ -5,7 +5,8 @@ const MAX_TICK_CATCHUP = 5 // s; larger gaps (sleep/hibernate) count as paused t
 
 function createInitialState(focusDuration = FOCUS_DURATION, breakDuration = BREAK_DURATION) {
   return {
-    phase: 'focus',
+    // Launching the app is not "I'm focusing now" — wait for 開始工作.
+    phase: 'idle',
     remaining: focusDuration,
     isPaused: false,
     focusDuration,
@@ -63,10 +64,11 @@ function startBreak(state, readyAt, now) {
 
 // Returns same reference when phase is not 'break' (e.g. a double-click on
 // Skip whose second click lands after the phase already flipped to focus).
-// 'done' is frozen; the user clicks 繼續工作 to start the next focus round.
-// Returns same reference outside 'done'.
+// 'idle' (app start / after reset) and 'done' (break finished) are frozen;
+// the user clicks 開始工作 / 繼續工作 to start a focus round.
+// Returns same reference in any other phase.
 function startFocus(state) {
-  if (state.phase !== 'done') return state
+  if (state.phase !== 'idle' && state.phase !== 'done') return state
   return { ...state, phase: 'focus', remaining: state.focusDuration ?? FOCUS_DURATION }
 }
 
@@ -88,14 +90,15 @@ function resume(state) {
   return { ...state, isPaused: false }
 }
 
-// Resets the focus countdown; preserves today's stats and durations.
+// Abandons the current focus round: back to frozen 'idle' with a full
+// countdown, waiting for 開始工作. Preserves today's stats and durations.
 // No-op outside focus so a click racing the focus→reminder transition
 // cannot silently cancel the break.
 function reset(state) {
   if (state.phase !== 'focus') return state
   return {
     ...state,
-    phase: 'focus',
+    phase: 'idle',
     remaining: state.focusDuration ?? FOCUS_DURATION,
     isPaused: false,
   }
@@ -121,7 +124,7 @@ function applyDurations(state, focusDuration, breakDuration) {
   const next = { ...state, focusDuration, breakDuration }
   if (state.phase === 'focus') next.remaining = Math.min(state.remaining, focusDuration)
   else if (state.phase === 'break') next.remaining = Math.min(state.remaining, breakDuration)
-  else if (state.phase === 'done') next.remaining = focusDuration // holds the upcoming focus length
+  else if (state.phase === 'idle' || state.phase === 'done') next.remaining = focusDuration // hold the upcoming focus length
   else next.remaining = breakDuration // reminder/ready hold the upcoming break length
   return next
 }
