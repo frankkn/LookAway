@@ -119,7 +119,7 @@ electron-builder.yml  # Windows nsis + portable
 | `window:minimize` / `window:close` | `minimizeWindow` / `closeWindow` | 隱藏到 tray / 離開 |
 
 **Main → Renderer**: `timer:tick`(廣播完整 state) — 前端用 `onTimerTick(cb)` 訂閱。
-**Invoke**: `timer:getState`(`getTimerState()`) — 視窗載入時取初始狀態。
+**Invoke**: `timer:getState`(`getTimerState()`) — 視窗載入時取初始狀態;`app:version`(`getAppVersion()`) — 取 app 版本號(設定視窗顯示用)。
 
 State 形狀:`{ phase, remaining, isPaused, stats: { breaksToday, focusTime } }`
 

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow:  () => ipcRenderer.send('window:close'),
 
   getTimerState: () => ipcRenderer.invoke('timer:getState'),
+  getAppVersion: () => ipcRenderer.invoke('app:version'),
 
   onTimerTick: (cb) => {
     const handler = (_, data) => cb(data)

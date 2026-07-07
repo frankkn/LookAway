@@ -346,6 +346,8 @@ ipcMain.on('window:close', (event) => {
 
 ipcMain.handle('timer:getState', () => ({ ...state }))
 
+ipcMain.handle('app:version', () => app.getVersion())
+
 ipcMain.on('settings:open', () => createSettingsWindow())
 
 // ── live preview (does not persist) ──

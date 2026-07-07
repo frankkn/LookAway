@@ -45,8 +45,13 @@ function Row({ label, children }) {
 
 export default function Settings() {
   const [form, setForm] = useState(null)
+  const [version, setVersion] = useState('')
   const [previewingWidget, setPreviewingWidget] = useState(false)
   const [previewingReminder, setPreviewingReminder] = useState(false)
+
+  useEffect(() => {
+    window.electronAPI?.getAppVersion?.().then(v => v && setVersion(v))
+  }, [])
 
   useEffect(() => {
     window.electronAPI?.getSettings().then(s => {
@@ -130,6 +135,12 @@ export default function Settings() {
     <div className="settings">
       <div className="settings-header drag">
         <span className="settings-title">⚙ 設定</span>
+        {version && <span className="settings-version">v{version}</span>}
+        <button
+          className="settings-close no-drag"
+          title="關閉"
+          onClick={handleCancel}
+        >×</button>
       </div>
 
       <div className="settings-body no-drag">
