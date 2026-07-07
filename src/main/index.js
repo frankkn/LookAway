@@ -359,6 +359,9 @@ ipcMain.on('widget:preview-stop', () => {
 
 ipcMain.on('reminder:preview', (_, s) => {
   if (!reminderWin || reminderWin.isDestroyed()) return
+  // A real reminder is on screen — don't downgrade its always-on-top level
+  // or flip it into preview mode (which would add a close X)
+  if (state.phase === 'reminder') return
   if (s.reminderWidth && s.reminderHeight) resizeWindow(reminderWin, s.reminderWidth, s.reminderHeight)
   if (s.reminderFontSize) applyFontSize(reminderWin, s.reminderFontSize)
   reminderWin.webContents.send('reminder:preview-mode', true) // show the close X
