@@ -88,16 +88,20 @@ npm run build      # → release/ 資料夾（安裝檔 + portable exe）
    ```
    設完重開 PowerShell 生效。⚠️ 不要把 token 寫進程式碼或 commit。
 
-### 每次發新版（三步）
+### 每次發新版（四步）
 
 ```powershell
 # 1. 改版本號（關鍵！沒往上加，使用者就不會收到更新）
 npm version patch --no-git-tag-version      # 例：1.0.0 → 1.0.1
 
-# 2. 打包並上傳到「草稿」Release
+# 2. 實測打包版能啟動（dev 正常不代表打包正常,曾因缺檔發過啟動即閃退的版本）
+npm run dist
+& ".\release\win-unpacked\Look Away.exe"    # 確認視窗出現、沒有錯誤對話框
+
+# 3. 打包並上傳到「草稿」Release
 npm run release
 
-# 3. 到 GitHub Releases 把草稿確認後按 Publish
+# 4. 到 GitHub Releases 把草稿確認後按 Publish
 ```
 
 > 只有正式 **Publish** 的 Release 才會觸發使用者更新；草稿（draft）與 pre-release 不會。
